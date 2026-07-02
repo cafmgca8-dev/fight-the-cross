@@ -7,6 +7,7 @@ export class GameScene {
     this.attackCooldown = 0;
     this.finished = false;
     this.frameId = null;
+    this.camera = { x: 0, y: 0, width: 980, height: 552 };
   }
 
   render() {
@@ -24,6 +25,7 @@ export class GameScene {
       '<div id="movePad" class="move-pad"><span></span></div>' +
       '<button id="attackButton" class="attack-button">공격</button>' +
       '</section>' +
+      '<section class="rotate-hint"><strong>가로로 돌려주세요</strong><span>전투는 가로 화면에 맞춰져 있습니다.</span></section>' +
       '<section id="gameBanner" class="game-banner"></section>' +
       '</main>');
 
@@ -38,6 +40,7 @@ export class GameScene {
     this.resize();
     this.setupMatch();
     this.bind();
+    this.tryLandscapeFullscreen();
     this.loadImage(map.image).then((image) => {
       this.mapImage = image;
       this.lastTime = performance.now();
@@ -60,6 +63,7 @@ export class GameScene {
     this.startedAt = performance.now();
     this.finished = false;
     this.attackCooldown = 0;
+    this.snapCameraToPlayer();
   }
 
   createEntity(id, name, character, spawn, controlled) {
@@ -78,7 +82,6 @@ export class GameScene {
       speed: controlled ? 250 : 210,
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
       alive: true,
-      aiTimer: 0,
       dirX: 0,
       dirY: -1,
       attackTimer: 0
@@ -93,6 +96,7 @@ export class GameScene {
     };
     this.onKeyUp = (event) => this.keys.delete(event.key.toLowerCase());
     window.addEventListener('resize', this.onResize);
+    window.addEventListener('orientationchange', this.onResize);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     this.exitButton.addEventListener('click', () => this.endScene());
@@ -123,12 +127,58 @@ export class GameScene {
     this.movePad.addEventListener('pointercancel', reset);
   }
 
+  tryLandscapeFullscreen() {
+    const lock = async () => {
+      try {
+        if (document.fullscreenEnabled && !document.fullscreenElement && window.innerWidth < 900) {
+          await document.documentElement.requestFullscreen();
+        }
+        await screen.orientation?.lock?.('landscape');
+      } catch {}
+    };
+    this.canvas.addEventListener('pointerdown', lock, { once: true });
+  }
+
   resize() {
     if (!this.canvas) return;
     const rect = this.canvas.getBoundingClientRect();
-    const size = Math.floor(Math.min(rect.width, rect.height) * window.devicePixelRatio);
-    this.canvas.width = size;
-    this.canvas.height = size;
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    this.canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+    this.canvas.height = Math.max(180, Math.floor(rect.height * dpr));
+    this.updateCameraSize();
+  }
+
+  updateCameraSize() {
+    if (!this.canvas) return;
+    const aspect = this.canvas.width / this.canvas.height;
+    const isLandscape = aspect >= 1.2;
+    const viewHeight = isLandscape ? 560 : 720;
+    this.camera.height = viewHeight;
+    this.camera.width = viewHeight * aspect;
+  }
+
+  snapCameraToPlayer() {
+    const player = this.entities?.[0];
+    if (!player) return;
+    this.camera.x = player.x - this.camera.width / 2;
+    this.camera.y = player.y - this.camera.height / 2;
+    this.clampCamera();
+  }
+
+  updateCamera(delta) {
+    const player = this.entities[0];
+    if (!player) return;
+    const targetX = player.x - this.camera.width / 2;
+    const targetY = player.y - this.camera.height / 2;
+    const follow = 1 - Math.pow(0.001, delta);
+    this.camera.x += (targetX - this.camera.x) * follow;
+    this.camera.y += (targetY - this.camera.y) * follow;
+    this.clampCamera();
+  }
+
+  clampCamera() {
+    this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, this.camera.x));
+    this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, this.camera.y));
   }
 
   async loadImage(src) {
@@ -153,6 +203,7 @@ export class GameScene {
     this.updatePlayer(delta);
     this.updateBots(delta);
     this.updateProjectiles(delta);
+    this.updateCamera(delta);
     this.updateHud();
     this.checkWinner();
   }
@@ -282,16 +333,19 @@ export class GameScene {
   }
 
   draw() {
+    if (!this.mapImage) return;
     const ctx = this.ctx;
-    const scale = this.canvas.width / this.map.width;
+    const scale = this.canvas.width / this.camera.width;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.drawImage(this.mapImage, 0, 0, this.canvas.width, this.canvas.height);
+    ctx.drawImage(this.mapImage, this.camera.x, this.camera.y, this.camera.width, this.camera.height, 0, 0, this.canvas.width, this.canvas.height);
     ctx.save();
     ctx.scale(scale, scale);
+    ctx.translate(-this.camera.x, -this.camera.y);
     this.drawZones(ctx);
     this.projectiles.forEach((projectile) => this.drawProjectile(ctx, projectile));
     this.entities.forEach((entity) => this.drawEntity(ctx, entity));
     ctx.restore();
+    this.drawMinimap(ctx);
   }
 
   drawZones(ctx) {
@@ -330,6 +384,28 @@ export class GameScene {
     ctx.fill();
   }
 
+  drawMinimap(ctx) {
+    const size = Math.min(130, this.canvas.width * 0.18);
+    const pad = 14;
+    const x = this.canvas.width - size - pad;
+    const y = pad;
+    ctx.save();
+    ctx.fillStyle = 'rgba(10, 14, 18, 0.58)';
+    ctx.fillRect(x, y, size, size);
+    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.strokeRect(x, y, size, size);
+    for (const entity of this.entities) {
+      if (!entity.alive) continue;
+      ctx.fillStyle = entity.color;
+      ctx.beginPath();
+      ctx.arc(x + (entity.x / this.map.width) * size, y + (entity.y / this.map.height) * size, entity.controlled ? 4 : 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(54,214,165,.85)';
+    ctx.strokeRect(x + (this.camera.x / this.map.width) * size, y + (this.camera.y / this.map.height) * size, (this.camera.width / this.map.width) * size, (this.camera.height / this.map.height) * size);
+    ctx.restore();
+  }
+
   distance(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
@@ -343,7 +419,9 @@ export class GameScene {
     this.finished = true;
     if (this.frameId) cancelAnimationFrame(this.frameId);
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('orientationchange', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => {});
   }
 }
