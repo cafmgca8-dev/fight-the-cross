@@ -1,12 +1,76 @@
 {
-  "game": { "title": "남매사기단 파이트 더 크로스", "maxPlayers": 5, "defaultMode": "one_vs_one" },
-  "level": { "goldPerLevel": 100, "maxLevel": 10, "hpGrowthPerLevel": 0.08, "attackGrowthPerLevel": 0.07 },
-  "starterCharacters": ["ain", "jaejun", "seojun"],
-  "modes": [
-    { "id": "one_vs_one", "name": "1 vs 1", "teams": [1, 1], "minPlayers": 2, "maxPlayers": 2 },
-    { "id": "one_vs_four", "name": "1 vs 4", "teams": [1, 4], "minPlayers": 5, "maxPlayers": 5 },
-    { "id": "two_vs_three", "name": "2 vs 3", "teams": [2, 3], "minPlayers": 5, "maxPlayers": 5 },
-    { "id": "free_for_all_5", "name": "1 vs 1 vs 1 vs 1 vs 1", "teams": [1, 1, 1, 1, 1], "minPlayers": 2, "maxPlayers": 5 }
+  "game": {
+    "title": "남매사기단 파이트 더 크로스",
+    "maxPlayers": 5,
+    "defaultMode": "one_vs_one"
+  },
+  "level": {
+    "coinsPerLevel": 100,
+    "maxLevel": 10,
+    "hpGrowthPerLevel": 0.08,
+    "attackGrowthPerLevel": 0.07
+  },
+  "victoryReward": {
+    "boxes": 1
+  },
+  "starterCharacters": [
+    "ain",
+    "jaejun",
+    "seojun"
   ],
-  "defaultSave": { "gold": 300, "boxes": 0, "wins": 0, "nickname": "플레이어", "settings": { "sound": true, "vibration": true } }
+  "modes": [
+    {
+      "id": "one_vs_one",
+      "name": "1 vs 1",
+      "teams": [
+        1,
+        1
+      ],
+      "minPlayers": 2,
+      "maxPlayers": 2
+    },
+    {
+      "id": "one_vs_four",
+      "name": "1 vs 4",
+      "teams": [
+        1,
+        4
+      ],
+      "minPlayers": 5,
+      "maxPlayers": 5
+    },
+    {
+      "id": "two_vs_three",
+      "name": "2 vs 3",
+      "teams": [
+        2,
+        3
+      ],
+      "minPlayers": 5,
+      "maxPlayers": 5
+    },
+    {
+      "id": "free_for_all_5",
+      "name": "1 vs 1 vs 1 vs 1 vs 1",
+      "teams": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "minPlayers": 2,
+      "maxPlayers": 5
+    }
+  ],
+  "defaultSave": {
+    "coins": 0,
+    "boxes": 0,
+    "wins": 0,
+    "nickname": "플레이어",
+    "settings": {
+      "sound": true,
+      "vibration": true
+    }
+  }
 }

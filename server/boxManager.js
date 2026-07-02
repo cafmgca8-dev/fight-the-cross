@@ -1,1 +1,10 @@
-export class BoxManager { constructor(config) { this.config = config; } getVictoryReward() { return this.config.victoryReward; } }
+export class BoxManager {
+  constructor(config, settings) {
+    this.config = config;
+    this.settings = settings;
+  }
+
+  getVictoryReward() {
+    return this.settings.victoryReward || { boxes: 1 };
+  }
+}

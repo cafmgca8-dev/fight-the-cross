@@ -77,6 +77,19 @@ export class GameManager {
     this.saveManager.saveLocal(this.save);
   }
 
+  recordVictory() {
+    const reward = this.data.settings.victoryReward || { boxes: 1 };
+    this.save = {
+      ...this.save,
+      wins: this.save.wins + 1,
+      boxes: this.save.boxes + reward.boxes
+    };
+    this.message = '승리 보상: 상자 ' + reward.boxes + '개 획득';
+    this.persist();
+    this.network.claimVictory({ save: this.save, reward });
+    this.refresh();
+  }
+
   chooseCharacter(characterId) {
     this.save = { ...this.save, selectedCharacterId: characterId };
     this.persist();
@@ -87,8 +100,20 @@ export class GameManager {
   }
 
   levelUp(characterId) {
-    const nextSave = this.levelManager.levelUp(characterId, this.save);
-    this.message = nextSave === this.save ? '업그레이드 조건이 부족합니다.' : '레벨 업 완료';
+    const character = this.characterManager.getById(characterId);
+    const before = this.save;
+    const nextSave = this.levelManager.levelUp(characterId, this.save, character);
+    const record = this.save.characters[characterId];
+    const maxLevel = this.levelManager.getMaxLevel(character);
+
+    if (nextSave === before && record?.level >= maxLevel) {
+      this.message = '이미 최대 레벨입니다. 최대 레벨은 ' + maxLevel + '입니다.';
+    } else if (nextSave === before) {
+      this.message = '코인이 부족합니다. 레벨업에는 100코인이 필요합니다.';
+    } else {
+      this.message = character.name + ' 레벨 업 완료';
+    }
+
     this.save = nextSave;
     this.persist();
     this.network.levelUp({ characterId, save: this.save });

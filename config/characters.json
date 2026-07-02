@@ -1,5 +1,130 @@
 [
-  {"id":"ain","name":"남매사기단-아인","rarity":"Basic","hp":5000,"maxLevel":10,"basicAttack":{"name":"주먹","damage":900,"effects":[]},"ultimate":{"name":"고함","description":"주변 적을 1초 기절","damage":0,"effects":[{"type":"stun","durationMs":1000,"radius":140}]}},
-  {"id":"jaejun","name":"남매사기단-재준","rarity":"Basic","hp":5000,"maxLevel":10,"basicAttack":{"name":"주먹","damage":500,"effects":[{"type":"knockback","force":90}]},"ultimate":{"name":"질주","description":"4초 동안 이동속도 2배","damage":0,"effects":[{"type":"speedMultiplier","value":2,"durationMs":4000}]}},
-  {"id":"seojun","name":"서준","rarity":"Basic","hp":3500,"maxLevel":10,"basicAttack":{"name":"저격총","damage":1500,"effects":[]},"ultimate":{"name":"유도 미사일","description":"유도 미사일로 큰 피해","damage":3000,"effects":[{"type":"homingProjectile","speed":420}]}}
+  {
+    "id": "ain",
+    "name": "남매사기단-아인",
+    "rarity": "Basic",
+    "hp": 5000,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "주먹",
+      "damage": 900,
+      "effects": []
+    },
+    "ultimate": {
+      "name": "고함",
+      "description": "주변 적을 1초 기절",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "stun",
+          "durationMs": 1000,
+          "radius": 140
+        }
+      ]
+    }
+  },
+  {
+    "id": "jaejun",
+    "name": "남매사기단-재준",
+    "rarity": "Basic",
+    "hp": 5000,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "주먹",
+      "damage": 500,
+      "effects": [
+        {
+          "type": "knockback",
+          "force": 90
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "질주",
+      "description": "4초 동안 이동속도 2배",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "speedMultiplier",
+          "value": 2,
+          "durationMs": 4000
+        }
+      ]
+    }
+  },
+  {
+    "id": "seojun",
+    "name": "서준",
+    "rarity": "Basic",
+    "hp": 3500,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "저격총",
+      "damage": 1500,
+      "effects": []
+    },
+    "ultimate": {
+      "name": "유도 미사일",
+      "description": "유도 미사일로 큰 피해",
+      "damage": 3000,
+      "effects": [
+        {
+          "type": "homingProjectile",
+          "speed": 420
+        }
+      ]
+    }
+  },
+  {
+    "id": "minjun",
+    "name": "민준",
+    "rarity": "Basic",
+    "hp": 4200,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "배트",
+      "damage": 850,
+      "effects": [
+        {
+          "type": "knockback",
+          "force": 70
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "회전 강타",
+      "description": "주변 적에게 피해를 주고 밀쳐냄",
+      "damage": 1800,
+      "effects": [
+        {
+          "type": "areaKnockback",
+          "radius": 120,
+          "force": 110
+        }
+      ]
+    }
+  },
+  {
+    "id": "harin",
+    "name": "하린",
+    "rarity": "Basic",
+    "hp": 3800,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "쌍권총",
+      "damage": 700,
+      "effects": []
+    },
+    "ultimate": {
+      "name": "집중 사격",
+      "description": "가장 가까운 적에게 연속 사격",
+      "damage": 2200,
+      "effects": [
+        {
+          "type": "rapidFire",
+          "shots": 4
+        }
+      ]
+    }
+  }
 ]

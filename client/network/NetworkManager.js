@@ -46,6 +46,7 @@ export class NetworkManager {
   startGame(payload) { this.socket?.emit('startGame', payload); }
   openBox(payload) { this.socket?.emit('openBox', payload); }
   levelUp(payload) { this.socket?.emit('levelUp', payload); }
+  claimVictory(payload) { this.socket?.emit('claimVictory', payload); }
 
   startPing() {
     if (this.pingTimer) return;
