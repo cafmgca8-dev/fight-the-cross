@@ -48,8 +48,12 @@ export class GameScene {
     this.setupMatch();
     this.bind();
     this.tryLandscapeFullscreen();
-    this.loadImage(map.image).then((image) => {
+    Promise.all([
+      this.loadImage(map.image),
+      map.collisionMask ? this.loadImage(map.collisionMask) : Promise.resolve(null)
+    ]).then(([image, maskImage]) => {
       this.mapImage = image;
+      this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
     });
@@ -307,6 +311,57 @@ export class GameScene {
     });
   }
 
+  setMaskImage(maskImage) {
+    this.maskImage = maskImage;
+    this.maskCanvas = null;
+    this.maskCtx = null;
+    if (!maskImage) return;
+    this.maskCanvas = document.createElement('canvas');
+    this.maskCanvas.width = maskImage.naturalWidth || maskImage.width;
+    this.maskCanvas.height = maskImage.naturalHeight || maskImage.height;
+    this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true });
+    this.maskCtx.drawImage(maskImage, 0, 0, this.maskCanvas.width, this.maskCanvas.height);
+  }
+
+  getMaskType(x, y) {
+    if (!this.maskCtx) return 'floor';
+    const px = Math.max(0, Math.min(this.maskCanvas.width - 1, Math.round((x / this.map.width) * this.maskCanvas.width)));
+    const py = Math.max(0, Math.min(this.maskCanvas.height - 1, Math.round((y / this.map.height) * this.maskCanvas.height)));
+    const data = this.maskCtx.getImageData(px, py, 1, 1).data;
+    const r = data[0];
+    const g = data[1];
+    const b = data[2];
+    if (r < 55 && g < 55 && b < 55) return 'wall';
+    if (g > 135 && r < 95 && b < 120) return 'bush';
+    if (b > 135 && g > 90 && r < 110) return 'water';
+    return 'floor';
+  }
+
+  getAreaMaskType(x, y, radius = 20) {
+    const samples = [
+      [x, y], [x + radius, y], [x - radius, y], [x, y + radius], [x, y - radius],
+      [x + radius * 0.7, y + radius * 0.7], [x - radius * 0.7, y + radius * 0.7],
+      [x + radius * 0.7, y - radius * 0.7], [x - radius * 0.7, y - radius * 0.7]
+    ];
+    const types = samples.map(([sx, sy]) => this.getMaskType(sx, sy));
+    if (types.includes('wall')) return 'wall';
+    if (types.includes('water')) return 'water';
+    if (types.includes('bush')) return 'bush';
+    return 'floor';
+  }
+
+  isWallAt(x, y, radius = 20) {
+    return this.getAreaMaskType(x, y, radius) === 'wall';
+  }
+
+  isWaterAt(x, y, radius = 20) {
+    return this.getAreaMaskType(x, y, radius) === 'water';
+  }
+
+  isBushAt(x, y, radius = 20) {
+    return this.getAreaMaskType(x, y, radius) === 'bush';
+  }
+
   loop(now) {
     const delta = Math.min(0.033, (now - this.lastTime) / 1000);
     this.lastTime = now;
@@ -372,14 +427,17 @@ export class GameScene {
     const ny = y / length;
     const oldX = entity.x;
     const oldY = entity.y;
-    entity.x += nx * entity.speed * delta;
-    entity.y += ny * entity.speed * delta;
+    const nextX = entity.x + nx * entity.speed * delta;
+    const nextY = entity.y + ny * entity.speed * delta;
+    const slow = this.isWaterAt(nextX, nextY, entity.radius) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
+    entity.x += nx * entity.speed * slow * delta;
+    entity.y += ny * entity.speed * slow * delta;
     entity.dirX = nx;
     entity.dirY = ny;
     this.game.mapManager.clampToArena(this.map, entity);
-    const oldWalkable = this.game.mapManager.isWalkable(this.map, oldX, oldY, entity.radius);
-    const nextWalkable = this.game.mapManager.isWalkable(this.map, entity.x, entity.y, entity.radius);
-    if (!nextWalkable && oldWalkable) {
+    const outsideArena = !this.game.mapManager.isInsideArena(this.map, entity.x, entity.y, entity.radius);
+    const blockedByWall = this.isWallAt(entity.x, entity.y, entity.radius);
+    if (outsideArena || blockedByWall) {
       entity.x = oldX;
       entity.y = oldY;
     }
@@ -483,7 +541,7 @@ export class GameScene {
           break;
         }
       }
-      if (!this.game.mapManager.isWalkable(this.map, projectile.x, projectile.y, 0)) projectile.life = 0;
+      if (this.isWallAt(projectile.x, projectile.y, 2) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) projectile.life = 0;
     }
     this.projectiles = this.projectiles.filter((projectile) => projectile.life > 0);
   }
@@ -531,9 +589,20 @@ export class GameScene {
     this.drawAimLine(ctx);
     this.effects.forEach((effect) => this.drawEffect(ctx, effect));
     this.projectiles.forEach((projectile) => this.drawProjectile(ctx, projectile));
-    this.entities.forEach((entity) => this.drawEntity(ctx, entity));
+    this.entities.forEach((entity) => { if (this.canSeeEntity(entity)) this.drawEntity(ctx, entity); });
     ctx.restore();
     this.drawMinimap(ctx);
+  }
+
+  canSeeEntity(entity) {
+    if (!entity.alive) return false;
+    if (entity.controlled) return true;
+    const player = this.getControlledEntity();
+    if (!player) return true;
+    const entityInBush = this.isBushAt(entity.x, entity.y, entity.radius);
+    if (!entityInBush) return true;
+    const playerInBush = this.isBushAt(player.x, player.y, player.radius);
+    return playerInBush;
   }
 
   drawZones(ctx) {
