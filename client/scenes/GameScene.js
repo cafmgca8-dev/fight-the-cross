@@ -307,7 +307,9 @@ export class GameScene {
     entity.dirX = nx;
     entity.dirY = ny;
     this.game.mapManager.clampToArena(this.map, entity);
-    if (this.game.mapManager.isInsideWater(this.map, entity.x, entity.y) || this.game.mapManager.isInsideCover(this.map, entity.x, entity.y, entity.radius)) {
+    const oldBlocked = this.game.mapManager.isInsideWater(this.map, oldX, oldY) || this.game.mapManager.isInsideCover(this.map, oldX, oldY, entity.radius);
+    const nextBlocked = this.game.mapManager.isInsideWater(this.map, entity.x, entity.y) || this.game.mapManager.isInsideCover(this.map, entity.x, entity.y, entity.radius);
+    if (nextBlocked && !oldBlocked) {
       entity.x = oldX;
       entity.y = oldY;
     }
