@@ -269,7 +269,7 @@ export class GameScene {
   updateCameraSize() {
     if (!this.canvas) return;
     const aspect = this.canvas.width / this.canvas.height;
-    const viewHeight = aspect >= 1.2 ? 560 : 720;
+    const viewHeight = aspect >= 1.2 ? 390 : 520;
     this.camera.height = viewHeight;
     this.camera.width = viewHeight * aspect;
   }
@@ -377,9 +377,9 @@ export class GameScene {
     entity.dirX = nx;
     entity.dirY = ny;
     this.game.mapManager.clampToArena(this.map, entity);
-    const oldBlocked = this.game.mapManager.isInsideWater(this.map, oldX, oldY) || this.game.mapManager.isInsideCover(this.map, oldX, oldY, entity.radius);
-    const nextBlocked = this.game.mapManager.isInsideWater(this.map, entity.x, entity.y) || this.game.mapManager.isInsideCover(this.map, entity.x, entity.y, entity.radius);
-    if (nextBlocked && !oldBlocked) {
+    const oldWalkable = this.game.mapManager.isWalkable(this.map, oldX, oldY, entity.radius);
+    const nextWalkable = this.game.mapManager.isWalkable(this.map, entity.x, entity.y, entity.radius);
+    if (!nextWalkable && oldWalkable) {
       entity.x = oldX;
       entity.y = oldY;
     }
@@ -483,7 +483,7 @@ export class GameScene {
           break;
         }
       }
-      if (this.game.mapManager.isInsideCover(this.map, projectile.x, projectile.y, 0) || this.game.mapManager.isInsideWater(this.map, projectile.x, projectile.y)) projectile.life = 0;
+      if (!this.game.mapManager.isWalkable(this.map, projectile.x, projectile.y, 0)) projectile.life = 0;
     }
     this.projectiles = this.projectiles.filter((projectile) => projectile.life > 0);
   }
@@ -537,8 +537,10 @@ export class GameScene {
   }
 
   drawZones(ctx) {
-    ctx.fillStyle = 'rgba(8, 14, 18, 0.16)';
-    for (const zone of this.map.cover || []) ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+    ctx.fillStyle = 'rgba(8, 14, 18, 0.14)';
+    for (const zone of [...(this.map.walls || []), ...(this.map.foliage || [])]) {
+      ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+    }
   }
 
   drawAimLine(ctx) {
