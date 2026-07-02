@@ -102,7 +102,7 @@ export class GameScene {
     return {
       id, name, character, controlled, x: spawn.x, y: spawn.y, radius: 24,
       hp: stats.hp, maxHp: stats.hp,
-      damage: Math.max(220, Math.round(stats.basicDamage * 0.34)),
+      damage: stats.basicDamage,
       speed: controlled ? 250 : 210,
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
       alive: true, dirX: 0, dirY: -1, attackTimer: 0
@@ -321,6 +321,50 @@ export class GameScene {
     this.maskCanvas.height = maskImage.naturalHeight || maskImage.height;
     this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true });
     this.maskCtx.drawImage(maskImage, 0, 0, this.maskCanvas.width, this.maskCanvas.height);
+    this.buildBushComponents();
+  }
+
+  buildBushComponents() {
+    this.bushGridWidth = 256;
+    this.bushGridHeight = 256;
+    const total = this.bushGridWidth * this.bushGridHeight;
+    const bush = new Uint8Array(total);
+    this.bushComponents = new Int32Array(total);
+    this.bushComponents.fill(-1);
+
+    for (let y = 0; y < this.bushGridHeight; y += 1) {
+      for (let x = 0; x < this.bushGridWidth; x += 1) {
+        const mapX = (x + 0.5) / this.bushGridWidth * this.map.width;
+        const mapY = (y + 0.5) / this.bushGridHeight * this.map.height;
+        bush[y * this.bushGridWidth + x] = this.getMaskFlags(mapX, mapY).bush ? 1 : 0;
+      }
+    }
+
+    let componentId = 0;
+    const queue = [];
+    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (let y = 0; y < this.bushGridHeight; y += 1) {
+      for (let x = 0; x < this.bushGridWidth; x += 1) {
+        const start = y * this.bushGridWidth + x;
+        if (!bush[start] || this.bushComponents[start] !== -1) continue;
+        this.bushComponents[start] = componentId;
+        queue.length = 0;
+        queue.push([x, y]);
+        for (let i = 0; i < queue.length; i += 1) {
+          const [cx, cy] = queue[i];
+          for (const [dx, dy] of neighbors) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= this.bushGridWidth || ny >= this.bushGridHeight) continue;
+            const next = ny * this.bushGridWidth + nx;
+            if (!bush[next] || this.bushComponents[next] !== -1) continue;
+            this.bushComponents[next] = componentId;
+            queue.push([nx, ny]);
+          }
+        }
+        componentId += 1;
+      }
+    }
   }
 
   getMaskFlags(x, y) {
@@ -432,7 +476,7 @@ export class GameScene {
     const oldY = entity.y;
     const nextX = entity.x + nx * entity.speed * delta;
     const nextY = entity.y + ny * entity.speed * delta;
-    const slow = this.isWaterAt(nextX, nextY, entity.radius) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
+    const slow = this.isWaterAt(nextX, nextY, 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
     entity.x += nx * entity.speed * slow * delta;
     entity.y += ny * entity.speed * slow * delta;
     entity.dirX = nx;
@@ -522,6 +566,10 @@ export class GameScene {
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
     if (entity.hp <= 0) entity.alive = false;
+    if (entity.controlled && this.isMultiplayer) {
+      this.stateSendTimer = 0;
+      this.broadcastState(1);
+    }
   }
 
   updateProjectiles(delta) {
@@ -590,15 +638,25 @@ export class GameScene {
     this.drawMinimap(ctx);
   }
 
+  getBushKey(entity) {
+    if (!this.isBushAt(entity.x, entity.y, 0)) return null;
+    if (!this.bushComponents) return 'single-bush-fallback';
+    const gx = Math.max(0, Math.min(this.bushGridWidth - 1, Math.floor(entity.x / this.map.width * this.bushGridWidth)));
+    const gy = Math.max(0, Math.min(this.bushGridHeight - 1, Math.floor(entity.y / this.map.height * this.bushGridHeight)));
+    const id = this.bushComponents[gy * this.bushGridWidth + gx];
+    return id >= 0 ? String(id) : null;
+  }
+
   canSeeEntity(entity) {
     if (!entity.alive) return false;
     if (entity.controlled) return true;
     const player = this.getControlledEntity();
     if (!player) return true;
-    const entityInBush = this.isBushAt(entity.x, entity.y, entity.radius);
-    if (!entityInBush) return true;
-    const playerInBush = this.isBushAt(player.x, player.y, player.radius);
-    return playerInBush;
+    const entityBushKey = this.getBushKey(entity);
+    if (!entityBushKey) return true;
+    const playerBushKey = this.getBushKey(player);
+    if (!playerBushKey) return false;
+    return entityBushKey === playerBushKey;
   }
 
   drawZones(ctx) {
