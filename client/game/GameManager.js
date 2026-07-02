@@ -142,7 +142,9 @@ export class GameManager {
 
   changeMode(modeId) {
     const mode = this.modeManager.select(modeId);
-    this.network.changeMode({ code: this.room?.code, modeId: mode.id });
+    if (this.room?.code) {
+      this.network.changeMode({ code: this.room.code, modeId: mode.id });
+    }
     this.message = mode.name + ' 모드 선택';
     this.refresh();
   }
@@ -154,7 +156,9 @@ export class GameManager {
       this.refresh();
       return;
     }
-    this.network.startGame({ code: this.room?.code });
+    if (this.room?.code) {
+      this.network.startGame({ code: this.room.code });
+    }
     this.message = mode.name + ' 게임 시작';
     this.showScene('game');
   }
