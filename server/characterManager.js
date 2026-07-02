@@ -1,0 +1,1 @@
+export class CharacterManager { constructor(characters) { this.characters = new Map(characters.map((character) => [character.id, character])); } has(characterId) { return this.characters.has(characterId); } list() { return Array.from(this.characters.values()); } }

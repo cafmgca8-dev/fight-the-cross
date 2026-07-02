@@ -1,0 +1,2 @@
+import { readJson, writeJson } from './fileStore.js';
+export class SaveManager { constructor(settings) { this.settings = settings; this.path = 'server/saves/players.json'; this.cache = new Map(); } async loadAll() { try { const data = await readJson(this.path); this.cache = new Map(Object.entries(data)); } catch { this.cache = new Map(); } } async savePlayer(playerId, save) { if (!save) return; this.cache.set(playerId, save); await writeJson(this.path, Object.fromEntries(this.cache)); } getPlayer(playerId) { return this.cache.get(playerId) || null; } }

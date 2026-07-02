@@ -1,0 +1,10 @@
+{
+  "name": "siblings-fight-the-cross",
+  "version": "2.0.0",
+  "description": "남매사기단 파이트 더 크로스 Version 2.0 foundation",
+  "main": "server/server.js",
+  "type": "module",
+  "scripts": { "start": "node server/server.js", "dev": "node server/server.js" },
+  "dependencies": { "express": "^4.19.2", "socket.io": "^4.7.5" },
+  "engines": { "node": ">=18" }
+}

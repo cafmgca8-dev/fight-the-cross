@@ -1,0 +1,4 @@
+{
+  "victoryReward": { "boxes": 1 },
+  "boxes": [{"id":"basic_box","name":"기본 상자","dropTable":[{"type":"gold","amountMin":40,"amountMax":160,"weight":75},{"type":"character","rarity":"Basic","weight":25}]}]
+}

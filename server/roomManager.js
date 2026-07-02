@@ -1,0 +1,11 @@
+export class RoomManager {
+  constructor(settings, playerManager) { this.settings = settings; this.playerManager = playerManager; this.rooms = new Map(); }
+  createRoom(socket, payload) { const code = this.normalizeCode(payload.code); if (!code) throw new Error('방 코드가 필요합니다.'); if (this.rooms.has(code)) throw new Error('이미 존재하는 방 코드입니다.'); const room = { code, hostId: socket.id, maxPlayers: this.settings.game.maxPlayers, modeId: this.settings.game.defaultMode, players: [this.playerManager.create(socket, payload, true)], createdAt: Date.now() }; this.rooms.set(code, room); socket.join(code); return room; }
+  joinRoom(socket, payload) { const code = this.normalizeCode(payload.code); const room = this.rooms.get(code); if (!room) throw new Error('방을 찾을 수 없습니다.'); if (room.players.length >= room.maxPlayers) throw new Error('방이 가득 찼습니다.'); if (!room.players.some((player) => player.id === socket.id)) room.players.push(this.playerManager.create(socket, payload, false)); socket.join(code); return room; }
+  closeRoom(code, hostId) { const room = this.rooms.get(this.normalizeCode(code)); if (!room) return null; if (room.hostId !== hostId) throw new Error('Host만 서버를 닫을 수 있습니다.'); this.rooms.delete(room.code); return room; }
+  leaveBySocket(socketId) { const changed = []; for (const room of this.rooms.values()) { const before = room.players.length; room.players = room.players.filter((player) => player.id !== socketId); if (room.hostId === socketId || room.players.length === 0) { this.rooms.delete(room.code); changed.push({ room, closed: true }); } else if (room.players.length !== before) changed.push({ room, closed: false }); } return changed; }
+  setMode(code, socketId, modeId) { const room = this.rooms.get(this.normalizeCode(code)); if (!room) throw new Error('방을 찾을 수 없습니다.'); if (room.hostId !== socketId) throw new Error('Host만 모드를 선택할 수 있습니다.'); room.modeId = modeId; return room; }
+  chooseCharacter(code, socketId, characterId) { const room = this.rooms.get(this.normalizeCode(code)); if (!room) return null; const player = room.players.find((item) => item.id === socketId); if (player) player.selectedCharacterId = characterId; return room; }
+  get(code) { return this.rooms.get(this.normalizeCode(code)); }
+  normalizeCode(code) { return String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); }
+}

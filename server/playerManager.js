@@ -1,0 +1,1 @@
+export class PlayerManager { create(socket, payload, isHost = false) { return { id: socket.id, nickname: payload.nickname || '플레이어', isHost, selectedCharacterId: payload.selectedCharacterId || null, ready: false }; } }

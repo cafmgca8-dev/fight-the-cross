@@ -1,0 +1,5 @@
+[
+  {"id":"ain","name":"남매사기단-아인","rarity":"Basic","hp":5000,"maxLevel":10,"basicAttack":{"name":"주먹","damage":900,"effects":[]},"ultimate":{"name":"고함","description":"주변 적을 1초 기절","damage":0,"effects":[{"type":"stun","durationMs":1000,"radius":140}]}},
+  {"id":"jaejun","name":"남매사기단-재준","rarity":"Basic","hp":5000,"maxLevel":10,"basicAttack":{"name":"주먹","damage":500,"effects":[{"type":"knockback","force":90}]},"ultimate":{"name":"질주","description":"4초 동안 이동속도 2배","damage":0,"effects":[{"type":"speedMultiplier","value":2,"durationMs":4000}]}},
+  {"id":"seojun","name":"서준","rarity":"Basic","hp":3500,"maxLevel":10,"basicAttack":{"name":"저격총","damage":1500,"effects":[]},"ultimate":{"name":"유도 미사일","description":"유도 미사일로 큰 피해","damage":3000,"effects":[{"type":"homingProjectile","speed":420}]}}
+]
