@@ -323,43 +323,46 @@ export class GameScene {
     this.maskCtx.drawImage(maskImage, 0, 0, this.maskCanvas.width, this.maskCanvas.height);
   }
 
-  getMaskType(x, y) {
-    if (!this.maskCtx) return 'floor';
+  getMaskFlags(x, y) {
+    if (!this.maskCtx) return { wall: false, bush: false, water: false };
     const px = Math.max(0, Math.min(this.maskCanvas.width - 1, Math.round((x / this.map.width) * this.maskCanvas.width)));
     const py = Math.max(0, Math.min(this.maskCanvas.height - 1, Math.round((y / this.map.height) * this.maskCanvas.height)));
     const data = this.maskCtx.getImageData(px, py, 1, 1).data;
     const r = data[0];
     const g = data[1];
     const b = data[2];
-    if (r < 55 && g < 55 && b < 55) return 'wall';
-    if (g > 135 && r < 95 && b < 120) return 'bush';
-    if (b > 135 && g > 90 && r < 110) return 'water';
-    return 'floor';
+    return {
+      wall: r < 70 && g < 70 && b < 70,
+      bush: g > 120 && g > r * 1.35 && g > b * 1.15,
+      water: b > 130 && b > r * 1.35 && g > 80
+    };
   }
 
-  getAreaMaskType(x, y, radius = 20) {
+  getAreaMaskFlags(x, y, radius = 20) {
     const samples = [
       [x, y], [x + radius, y], [x - radius, y], [x, y + radius], [x, y - radius],
       [x + radius * 0.7, y + radius * 0.7], [x - radius * 0.7, y + radius * 0.7],
       [x + radius * 0.7, y - radius * 0.7], [x - radius * 0.7, y - radius * 0.7]
     ];
-    const types = samples.map(([sx, sy]) => this.getMaskType(sx, sy));
-    if (types.includes('wall')) return 'wall';
-    if (types.includes('water')) return 'water';
-    if (types.includes('bush')) return 'bush';
-    return 'floor';
+    return samples.reduce((flags, point) => {
+      const next = this.getMaskFlags(point[0], point[1]);
+      flags.wall = flags.wall || next.wall;
+      flags.bush = flags.bush || next.bush;
+      flags.water = flags.water || next.water;
+      return flags;
+    }, { wall: false, bush: false, water: false });
   }
 
   isWallAt(x, y, radius = 20) {
-    return this.getAreaMaskType(x, y, radius) === 'wall';
+    return this.getAreaMaskFlags(x, y, radius).wall;
   }
 
   isWaterAt(x, y, radius = 20) {
-    return this.getAreaMaskType(x, y, radius) === 'water';
+    return this.getAreaMaskFlags(x, y, radius).water;
   }
 
   isBushAt(x, y, radius = 20) {
-    return this.getAreaMaskType(x, y, radius) === 'bush';
+    return this.getAreaMaskFlags(x, y, radius).bush;
   }
 
   loop(now) {
