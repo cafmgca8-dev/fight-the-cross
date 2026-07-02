@@ -4,6 +4,7 @@ import { LevelManager } from './LevelManager.js';
 import { ModeManager } from './ModeManager.js';
 import { BoxManager } from './BoxManager.js';
 import { SaveManager } from './SaveManager.js';
+import { MapManager } from './MapManager.js';
 import { AnimationManager } from './AnimationManager.js';
 import { AudioManager } from './AudioManager.js';
 import { InputManager } from './InputManager.js';
@@ -14,6 +15,7 @@ import { CharacterScene } from '../scenes/CharacterScene.js';
 import { BoxScene } from '../scenes/BoxScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
 import { LobbyScene } from '../scenes/LobbyScene.js';
+import { GameScene } from '../scenes/GameScene.js';
 
 export class GameManager {
   constructor(root) {
@@ -33,6 +35,7 @@ export class GameManager {
     this.levelManager = new LevelManager(this.data.settings);
     this.characterManager = new CharacterManager(this.data.characters, this.levelManager);
     this.modeManager = new ModeManager(this.data.settings);
+    this.mapManager = new MapManager(this.data.maps);
     this.boxManager = new BoxManager(this.data.boxes, this.characterManager);
     this.saveManager = new SaveManager(this.data.settings);
     this.save = this.saveManager.loadLocal();
@@ -43,7 +46,8 @@ export class GameManager {
       characters: new CharacterScene(this),
       boxes: new BoxScene(this),
       settings: new SettingsScene(this),
-      lobby: new LobbyScene(this)
+      lobby: new LobbyScene(this),
+      game: new GameScene(this)
     };
     this.bindNetwork();
     this.network.connect();
@@ -57,20 +61,27 @@ export class GameManager {
     this.network.on('roomJoined', (room) => { this.room = room; this.message = '방에 참가했습니다.'; this.showScene('lobby'); });
     this.network.on('roomUpdated', (room) => { this.room = room; this.refresh(); });
     this.network.on('serverClosed', () => { this.room = null; this.message = '호스트가 서버를 종료했습니다.'; this.showScene('main'); });
-    this.network.on('message', (payload) => { this.message = payload.text; this.refresh(); });
+    this.network.on('message', (payload) => { this.message = payload.text; if (this.currentScene !== 'game') this.refresh(); });
   }
 
   showScene(name) {
+    if (this.currentScene === 'game' && name !== 'game') this.scenes.game.cleanup?.();
     this.currentScene = name;
     this.scenes[name].render();
   }
 
   refresh() {
+    if (this.currentScene === 'game') return;
     this.scenes[this.currentScene]?.render();
   }
 
   updateStatusOnly() {
     this.ui?.updateStatusBar(this.room, this.network.state);
+  }
+
+  getActiveMode() {
+    const modeId = this.room?.modeId || this.modeManager.selectedModeId;
+    return this.modeManager.modes.get(modeId) || this.modeManager.getSelected();
   }
 
   persist() {
@@ -137,9 +148,15 @@ export class GameManager {
   }
 
   startGame() {
+    const mode = this.getActiveMode();
+    if (mode.id !== 'free_for_all_5') {
+      this.message = '지금은 1 vs 1 vs 1 vs 1 vs 1 모드부터 플레이할 수 있습니다.';
+      this.refresh();
+      return;
+    }
     this.network.startGame({ code: this.room?.code });
-    this.message = '게임 시작 요청';
-    this.refresh();
+    this.message = mode.name + ' 게임 시작';
+    this.showScene('game');
   }
 
   updateNickname(nickname) {

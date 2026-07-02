@@ -1,5 +1,38 @@
 export class LobbyScene {
-  constructor(game) { this.game = game; }
-  render() { const room = this.game.room; const players = room?.players?.map((player) => '<div class="player-row"><span>' + player.nickname + (player.isHost ? ' · Host' : '') + '</span><strong>' + (player.selectedCharacterId || '-') + '</strong></div>').join('') || '<div class="player-row"><span>아직 참가한 방이 없습니다.</span><strong>-</strong></div>'; const modes = this.game.modeManager.getAll().map((mode) => '<button class="mode-option ' + ((room?.modeId === mode.id || (!room && this.game.modeManager.selectedModeId === mode.id)) ? 'selected' : '') + '" data-mode="' + mode.id + '"><span>' + mode.name + '</span><strong>' + mode.minPlayers + '-' + mode.maxPlayers + '명</strong></button>').join(''); this.game.ui.render('<main class="screen">' + this.game.ui.statusBar(room, this.game.network.state) + '<div class="nav-row"><button class="btn secondary" data-scene="main">홈</button><button class="btn secondary" data-scene="characters">캐릭터</button></div><section class="grid main-grid"><div class="panel"><h2>플레이어</h2><div class="lobby-list">' + players + '</div></div><div class="panel"><h2>모드</h2><div class="mode-list">' + modes + '</div><button id="startGame" class="btn">게임 시작</button></div></section><section class="message-log">' + this.game.message + '</section></main>'); this.bind(); }
-  bind() { document.querySelectorAll('[data-scene]').forEach((button) => button.addEventListener('click', () => this.game.showScene(button.dataset.scene))); document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => this.game.changeMode(button.dataset.mode))); document.querySelector('#startGame').addEventListener('click', () => this.game.startGame()); }
+  constructor(game) {
+    this.game = game;
+  }
+
+  render() {
+    const room = this.game.room;
+    const players = room?.players?.map((player) => {
+      return '<div class="player-row"><span>' + player.nickname + (player.isHost ? ' · Host' : '') + '</span><strong>' + (player.selectedCharacterId || '-') + '</strong></div>';
+    }).join('') || '<div class="player-row"><span>아직 참가한 방이 없습니다.</span><strong>-</strong></div>';
+
+    const modes = this.game.modeManager.getAll().map((mode) => {
+      const selected = room?.modeId === mode.id || (!room && this.game.modeManager.selectedModeId === mode.id);
+      return '<button class="mode-option ' + (selected ? 'selected' : '') + '" data-mode="' + mode.id + '"><span>' + mode.name + '</span><strong>' + mode.minPlayers + '-' + mode.maxPlayers + '명</strong></button>';
+    }).join('');
+
+    this.game.ui.render('<main class="screen">' +
+      this.game.ui.statusBar(room, this.game.network.state) +
+      '<div class="nav-row"><button class="btn secondary" data-scene="main">홈</button><button class="btn secondary" data-scene="characters">캐릭터</button></div>' +
+      '<section class="grid main-grid">' +
+      '<div class="panel"><h2>플레이어</h2><div class="lobby-list">' + players + '</div></div>' +
+      '<div class="panel"><h2>모드</h2><div class="mode-list">' + modes + '</div><button id="startGame" class="btn">게임 시작</button></div>' +
+      '</section>' +
+      '<section class="message-log">' + this.game.message + '</section>' +
+      '</main>');
+    this.bind();
+  }
+
+  bind() {
+    document.querySelectorAll('[data-scene]').forEach((button) => {
+      button.addEventListener('click', () => this.game.showScene(button.dataset.scene));
+    });
+    document.querySelectorAll('[data-mode]').forEach((button) => {
+      button.addEventListener('click', () => this.game.changeMode(button.dataset.mode));
+    });
+    document.querySelector('#startGame').addEventListener('click', () => this.game.startGame());
+  }
 }
