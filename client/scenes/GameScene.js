@@ -451,9 +451,9 @@ export class GameScene {
     const name = entity.character.basicAttack.name;
     if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.95, range: 760, speed: 980, width: 4, color: '#f8fbff', damageScale: 1.08 };
     if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.7, range: 520, speed: 780, width: 6, color: '#ff75c8', damageScale: 0.54 };
-    if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.82, range: 112, color: '#ffcc4d', damageScale: 0.95, knockback: 60 };
-    if (id === 'jaejun') return { type: 'punch', cooldown: 0.62, range: 92, color: '#9fd2ff', damageScale: 0.72, knockback: 130 };
-    return { type: 'punch', cooldown: 0.68, range: 96, color: '#36d6a5', damageScale: 1, knockback: 40 };
+    if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.82, range: 112, color: '#ffcc4d', damageScale: 0.95 };
+    if (id === 'jaejun') return { type: 'punch', cooldown: 0.62, range: 92, color: '#9fd2ff', damageScale: 0.72 };
+    return { type: 'punch', cooldown: 0.68, range: 96, color: '#36d6a5', damageScale: 1 };
   }
 
   performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
@@ -499,7 +499,6 @@ export class GameScene {
       const distance = Math.hypot(entity.x - hitX, entity.y - hitY);
       if (distance <= entity.radius + profile.range * 0.55) {
         this.damageEntity(entity, owner.damage * profile.damageScale);
-        if (profile.knockback) this.applyKnockback(entity, nx, ny, profile.knockback);
       }
     }
   }
@@ -523,12 +522,6 @@ export class GameScene {
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
     if (entity.hp <= 0) entity.alive = false;
-  }
-
-  applyKnockback(entity, nx, ny, force) {
-    entity.x += nx * force;
-    entity.y += ny * force;
-    this.game.mapManager.clampToArena(this.map, entity);
   }
 
   updateProjectiles(delta) {
@@ -652,14 +645,34 @@ export class GameScene {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = entity.controlled ? 5 : 3;
     ctx.stroke();
-    ctx.fillStyle = '#111318';
-    ctx.font = '700 22px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText(entity.name, entity.x, entity.y - 38);
-    ctx.fillStyle = 'rgba(0,0,0,.45)';
-    ctx.fillRect(entity.x - 34, entity.y + 34, 68, 8);
-    ctx.fillStyle = entity.hp / entity.maxHp > 0.35 ? '#36d6a5' : '#ff5f6d';
-    ctx.fillRect(entity.x - 34, entity.y + 34, 68 * (entity.hp / entity.maxHp), 8);
+    ctx.textBaseline = 'middle';
+    ctx.font = '800 15px system-ui';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255,255,255,.82)';
+    ctx.strokeText(entity.name, entity.x, entity.y - 44);
+    ctx.fillStyle = '#111318';
+    ctx.fillText(entity.name, entity.x, entity.y - 44);
+
+    const barWidth = 82;
+    const barHeight = 14;
+    const barX = entity.x - barWidth / 2;
+    const barY = entity.y - 31;
+    const hpRatio = Math.max(0, entity.hp / entity.maxHp);
+    ctx.fillStyle = 'rgba(0,0,0,.58)';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+    ctx.fillStyle = hpRatio > 0.35 ? '#36d6a5' : '#ff5f6d';
+    ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
+    ctx.strokeStyle = 'rgba(255,255,255,.88)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
+    ctx.font = '800 10px system-ui';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = 'rgba(0,0,0,.7)';
+    ctx.lineWidth = 3;
+    const hpText = Math.ceil(entity.hp) + ' / ' + entity.maxHp;
+    ctx.strokeText(hpText, entity.x, barY + barHeight / 2 + 0.5);
+    ctx.fillText(hpText, entity.x, barY + barHeight / 2 + 0.5);
     ctx.restore();
   }
 
