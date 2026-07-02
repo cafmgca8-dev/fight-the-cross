@@ -157,3 +157,135 @@
     height: 96px;
   }
 }
+
+
+/* Brawl-style landscape battle view */
+body:has(.game-screen) {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+body:has(.game-screen) .app-shell {
+  padding: 0;
+  min-height: 100dvh;
+}
+
+.game-screen {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-width: none;
+  display: block;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  background: #0b2228;
+}
+
+.game-hud {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 5;
+  min-height: 52px;
+  grid-template-columns: 92px 1fr auto;
+  padding: 8px;
+  background: rgba(10, 14, 18, 0.62);
+  border-color: rgba(255,255,255,.18);
+}
+
+.game-hud .btn {
+  min-height: 44px;
+}
+
+.arena-wrap {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.game-canvas {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #1f5861;
+}
+
+.mobile-controls {
+  position: absolute;
+  inset: auto max(18px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  z-index: 6;
+  min-height: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.move-pad,
+.attack-button {
+  width: clamp(86px, 14vw, 118px);
+  height: clamp(86px, 14vw, 118px);
+  opacity: .92;
+}
+
+.move-pad span {
+  width: 48%;
+  height: 48%;
+}
+
+.attack-button {
+  font-size: 18px;
+}
+
+.rotate-hint {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  place-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(10,14,18,.92);
+  text-align: center;
+}
+
+.rotate-hint strong {
+  font-size: 28px;
+}
+
+.rotate-hint span {
+  color: var(--muted);
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .rotate-hint {
+    display: grid;
+  }
+}
+
+@media (max-width: 760px) {
+  .game-hud {
+    grid-template-columns: 76px 1fr auto;
+    min-height: 48px;
+  }
+  .game-hud > div:last-child {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+  .game-hud strong {
+    font-size: 13px;
+  }
+  .game-hud span {
+    font-size: 11px;
+  }
+}
