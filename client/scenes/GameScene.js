@@ -11,6 +11,9 @@ export class GameScene {
     this.attackCooldown = 0;
     this.finished = false;
     this.frameId = null;
+    this.stateSendTimer = 0;
+    this.networkUnsubs = [];
+    this.isMultiplayer = false;
     this.camera = { x: 0, y: 0, width: 980, height: 552 };
   }
 
@@ -55,19 +58,33 @@ export class GameScene {
   setupMatch() {
     const owned = this.game.characterManager.getOwned(this.game.save);
     const all = this.game.characterManager.getAll();
-    const playerCharacter = this.game.characterManager.getById(this.game.save.selectedCharacterId) || owned[0] || all[0];
-    const botCharacters = all.filter((character) => character.id !== playerCharacter.id);
     const spawns = this.map.spawnPoints;
-    this.entities = [this.createEntity('player', this.game.save.nickname || '플레이어', playerCharacter, spawns[0], true)];
-    for (let i = 1; i < 5; i += 1) {
-      const character = botCharacters[(i - 1) % botCharacters.length] || all[i % all.length];
-      this.entities.push(this.createEntity('bot' + i, '상대 ' + i, character, spawns[i], false));
+    const myId = this.game.network.getId();
+    const roomPlayers = this.game.room?.players || [];
+    this.isMultiplayer = roomPlayers.length > 0;
+
+    if (this.isMultiplayer) {
+      this.entities = roomPlayers.map((player, index) => {
+        const character = this.game.characterManager.getById(player.selectedCharacterId) || owned[0] || all[0];
+        const spawn = spawns[index % spawns.length];
+        return this.createEntity(player.id, player.nickname || '플레이어', character, spawn, player.id === myId);
+      });
+    } else {
+      const playerCharacter = this.game.characterManager.getById(this.game.save.selectedCharacterId) || owned[0] || all[0];
+      const botCharacters = all.filter((character) => character.id !== playerCharacter.id);
+      this.entities = [this.createEntity('player', this.game.save.nickname || '플레이어', playerCharacter, spawns[0], true)];
+      for (let i = 1; i < 5; i += 1) {
+        const character = botCharacters[(i - 1) % botCharacters.length] || all[i % all.length];
+        this.entities.push(this.createEntity('bot' + i, '상대 ' + i, character, spawns[i], false));
+      }
     }
+
     this.projectiles = [];
     this.effects = [];
     this.startedAt = performance.now();
     this.finished = false;
     this.attackCooldown = 0;
+    this.stateSendTimer = 0;
     this.snapCameraToPlayer();
   }
 
@@ -97,6 +114,7 @@ export class GameScene {
     this.exitButton.addEventListener('click', () => this.endScene());
     this.bindMovePad();
     this.bindAttackPad();
+    this.bindMultiplayer();
   }
 
   bindMovePad() {
@@ -178,6 +196,47 @@ export class GameScene {
     return { x, y, power: length / maxDistance, knobX: x * length, knobY: y * length };
   }
 
+  bindMultiplayer() {
+    this.networkUnsubs.forEach((unsubscribe) => unsubscribe());
+    this.networkUnsubs = [];
+    if (!this.isMultiplayer) return;
+
+    this.networkUnsubs.push(this.game.network.on('playerState', (payload) => {
+      const entity = this.entities.find((item) => item.id === payload.playerId);
+      if (!entity || entity.controlled) return;
+      entity.x = payload.x;
+      entity.y = payload.y;
+      entity.hp = payload.hp;
+      entity.alive = payload.alive;
+      entity.dirX = payload.dirX;
+      entity.dirY = payload.dirY;
+    }));
+
+    this.networkUnsubs.push(this.game.network.on('playerAttack', (payload) => {
+      const entity = this.entities.find((item) => item.id === payload.playerId);
+      if (!entity || entity.controlled) return;
+      this.performAttack(entity, payload.dirX, payload.dirY, true, true);
+    }));
+  }
+
+  broadcastState(delta) {
+    if (!this.isMultiplayer || !this.game.room?.code) return;
+    this.stateSendTimer -= delta;
+    if (this.stateSendTimer > 0) return;
+    this.stateSendTimer = 0.05;
+    const player = this.entities.find((entity) => entity.controlled);
+    if (!player) return;
+    this.game.network.sendPlayerState({
+      code: this.game.room.code,
+      x: Math.round(player.x),
+      y: Math.round(player.y),
+      hp: player.hp,
+      alive: player.alive,
+      dirX: player.dirX,
+      dirY: player.dirY
+    });
+  }
+
   tryLandscapeFullscreen() {
     const lock = async () => {
       try {
@@ -249,7 +308,8 @@ export class GameScene {
   update(delta) {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.updatePlayer(delta);
-    this.updateBots(delta);
+    this.broadcastState(delta);
+    if (!this.isMultiplayer) this.updateBots(delta);
     this.updateProjectiles(delta);
     this.updateEffects(delta);
     this.updateCamera(delta);
@@ -325,7 +385,7 @@ export class GameScene {
     return { type: 'punch', cooldown: 0.68, range: 96, color: '#36d6a5', damageScale: 1, knockback: 40 };
   }
 
-  performAttack(owner, dirX, dirY, ignorePlayerCooldown = false) {
+  performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
     if (!owner?.alive) return;
     if (owner.controlled && !ignorePlayerCooldown && this.attackCooldown > 0) return;
     const length = Math.hypot(dirX, dirY) || 1;
@@ -334,7 +394,12 @@ export class GameScene {
     owner.dirX = nx;
     owner.dirY = ny;
     const profile = this.getAttackProfile(owner);
-    if (owner.controlled) this.attackCooldown = profile.cooldown;
+    if (owner.controlled) {
+      this.attackCooldown = profile.cooldown;
+      if (this.isMultiplayer && this.game.room?.code && !fromNetwork) {
+        this.game.network.sendPlayerAttack({ code: this.game.room.code, dirX: nx, dirY: ny });
+      }
+    }
 
     if (profile.type === 'punch' || profile.type === 'bat') {
       this.meleeAttack(owner, nx, ny, profile);
@@ -590,6 +655,8 @@ export class GameScene {
     window.removeEventListener('orientationchange', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    this.networkUnsubs.forEach((unsubscribe) => unsubscribe());
+    this.networkUnsubs = [];
     if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => {});
   }
 }

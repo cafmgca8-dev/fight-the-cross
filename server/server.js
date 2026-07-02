@@ -74,6 +74,19 @@ io.on('connection', (socket) => {
     const result = gameManager.canStart(room, socket.id);
     if (!result.ok) throw new Error(result.reason);
     io.to(room.code).emit('message', { text: result.mode.name + ' 게임을 시작합니다.' });
+    io.to(room.code).emit('gameStarted', { room, mode: result.mode, startedAt: Date.now() });
+  }));
+
+  socket.on('playerState', (payload = {}) => handle(socket, () => {
+    const room = roomManager.get(payload.code);
+    if (!room) return;
+    socket.to(room.code).emit('playerState', { ...payload, playerId: socket.id });
+  }));
+
+  socket.on('playerAttack', (payload = {}) => handle(socket, () => {
+    const room = roomManager.get(payload.code);
+    if (!room) return;
+    socket.to(room.code).emit('playerAttack', { ...payload, playerId: socket.id });
   }));
 
   socket.on('claimVictory', (payload = {}) => handle(socket, async () => {

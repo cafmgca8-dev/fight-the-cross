@@ -60,6 +60,7 @@ export class GameManager {
     this.network.on('roomCreated', (room) => { this.room = room; this.message = '서버가 열렸습니다.'; this.showScene('lobby'); });
     this.network.on('roomJoined', (room) => { this.room = room; this.message = '방에 참가했습니다.'; this.showScene('lobby'); });
     this.network.on('roomUpdated', (room) => { this.room = room; this.refresh(); });
+    this.network.on('gameStarted', (payload) => { this.room = payload.room || this.room; this.message = '게임 시작'; this.showScene('game'); });
     this.network.on('serverClosed', () => { this.room = null; this.message = '호스트가 서버를 종료했습니다.'; this.showScene('main'); });
     this.network.on('message', (payload) => { this.message = payload.text; if (this.currentScene !== 'game') this.refresh(); });
   }
@@ -157,7 +158,10 @@ export class GameManager {
       return;
     }
     if (this.room?.code) {
+      this.message = '다른 플레이어를 전투 화면으로 이동시키는 중입니다.';
       this.network.startGame({ code: this.room.code });
+      this.refresh();
+      return;
     }
     this.message = mode.name + ' 게임 시작';
     this.showScene('game');
