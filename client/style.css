@@ -289,3 +289,57 @@ body:has(.game-screen) .app-shell {
     font-size: 11px;
   }
 }
+
+
+.attack-pad {
+  width: clamp(86px, 14vw, 118px);
+  height: clamp(86px, 14vw, 118px);
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 204, 77, .16);
+  border: 1px solid rgba(255, 204, 77, .38);
+  box-shadow: 0 0 28px rgba(255,204,77,.24);
+  color: rgba(255,255,255,.9);
+  font-weight: 950;
+  touch-action: none;
+  pointer-events: auto;
+  user-select: none;
+  opacity: .94;
+}
+
+.attack-pad span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48%;
+  height: 48%;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 26px rgba(255,204,77,.4);
+  transform: translate(-50%, -50%);
+}
+
+.attack-pad b {
+  position: relative;
+  z-index: 1;
+  color: #1b0b05;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.move-pad,
+.attack-pad,
+.game-canvas {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+@media (max-width: 760px) {
+  .attack-pad {
+    width: 96px;
+    height: 96px;
+  }
+}
