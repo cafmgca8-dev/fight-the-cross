@@ -22,7 +22,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 const characterManager = new CharacterManager(characters);
-const playerManager = new PlayerManager();
+const playerManager = new PlayerManager(settings);
 const roomManager = new RoomManager(settings, playerManager);
 const gameManager = new GameManager(settings);
 const boxManager = new BoxManager(boxes, settings);
@@ -71,6 +71,10 @@ io.on('connection', (socket) => {
 
   socket.on('startGame', (payload = {}) => handle(socket, () => {
     const room = roomManager.get(payload.code);
+    if (room) {
+      const player = room.players.find((item) => item.id === socket.id);
+      if (player && payload.selectedCharacterId) player.selectedCharacterId = payload.selectedCharacterId;
+    }
     const result = gameManager.canStart(room, socket.id);
     if (!result.ok) throw new Error(result.reason);
     io.to(room.code).emit('message', { text: result.mode.name + ' 게임을 시작합니다.' });

@@ -69,6 +69,11 @@ export class GameScene {
         const spawn = spawns[index % spawns.length];
         return this.createEntity(player.id, player.nickname || '플레이어', character, spawn, player.id === myId);
       });
+      if (!this.entities.some((entity) => entity.controlled)) {
+        const character = this.game.characterManager.getById(this.game.save.selectedCharacterId) || owned[0] || all[0];
+        const spawn = spawns[this.entities.length % spawns.length];
+        this.entities.push(this.createEntity(myId, this.game.save.nickname || '플레이어', character, spawn, true));
+      }
     } else {
       const playerCharacter = this.game.characterManager.getById(this.game.save.selectedCharacterId) || owned[0] || all[0];
       const botCharacters = all.filter((character) => character.id !== playerCharacter.id);
@@ -104,7 +109,8 @@ export class GameScene {
     this.onResize = () => this.resize();
     this.onKeyDown = (event) => {
       this.keys.add(event.key.toLowerCase());
-      if (event.code === 'Space') this.performAttack(this.entities[0], this.entities[0].dirX || 0, this.entities[0].dirY || -1);
+      const player = this.getControlledEntity();
+      if (event.code === 'Space' && player) this.performAttack(player, player.dirX || 0, player.dirY || -1);
     };
     this.onKeyUp = (event) => this.keys.delete(event.key.toLowerCase());
     window.addEventListener('resize', this.onResize);
@@ -166,7 +172,7 @@ export class GameScene {
       if (event.pointerId !== this.attackPointerId) return;
       const vector = { ...this.attackVector };
       reset();
-      if (vector.power > 0.18) this.performAttack(this.entities[0], vector.x, vector.y);
+      if (vector.power > 0.18) this.performAttack(this.getControlledEntity(), vector.x, vector.y);
     };
     this.attackPad.addEventListener('pointerdown', (event) => {
       event.preventDefault();
@@ -224,7 +230,7 @@ export class GameScene {
     this.stateSendTimer -= delta;
     if (this.stateSendTimer > 0) return;
     this.stateSendTimer = 0.05;
-    const player = this.entities.find((entity) => entity.controlled);
+    const player = this.getControlledEntity();
     if (!player) return;
     this.game.network.sendPlayerState({
       code: this.game.room.code,
@@ -235,6 +241,10 @@ export class GameScene {
       dirX: player.dirX,
       dirY: player.dirY
     });
+  }
+
+  getControlledEntity() {
+    return this.entities.find((entity) => entity.controlled) || this.entities[0];
   }
 
   tryLandscapeFullscreen() {
@@ -273,7 +283,7 @@ export class GameScene {
   }
 
   updateCamera(delta) {
-    const player = this.entities[0];
+    const player = this.getControlledEntity();
     if (!player) return;
     const targetX = player.x - this.camera.width / 2;
     const targetY = player.y - this.camera.height / 2;
@@ -318,8 +328,8 @@ export class GameScene {
   }
 
   updatePlayer(delta) {
-    const player = this.entities[0];
-    if (!player.alive) return;
+    const player = this.getControlledEntity();
+    if (!player?.alive) return;
     const vector = this.getMoveVector();
     this.moveEntity(player, vector.x, vector.y, delta);
   }
@@ -532,7 +542,7 @@ export class GameScene {
   }
 
   drawAimLine(ctx) {
-    const player = this.entities[0];
+    const player = this.getControlledEntity();
     if (!this.isAiming || !player?.alive) return;
     const profile = this.getAttackProfile(player);
     const range = profile.type === 'punch' || profile.type === 'bat' ? profile.range * 1.8 : profile.range;

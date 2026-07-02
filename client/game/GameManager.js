@@ -159,7 +159,8 @@ export class GameManager {
     }
     if (this.room?.code) {
       this.message = '다른 플레이어를 전투 화면으로 이동시키는 중입니다.';
-      this.network.startGame({ code: this.room.code });
+      this.network.chooseCharacter({ code: this.room.code, characterId: this.save.selectedCharacterId });
+      this.network.startGame({ code: this.room.code, selectedCharacterId: this.save.selectedCharacterId });
       this.refresh();
       return;
     }
