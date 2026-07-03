@@ -313,7 +313,7 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerAttack', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled) return;
+      if (!entity || entity.controlled || this.isStunned(entity)) return;
       entity.ammo = Math.max(0, entity.ammo - 1);
       if (entity.ammo < entity.maxAmmo && entity.ammoReloadTimer <= 0) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
       this.performAttack(entity, payload.dirX, payload.dirY, true, true);
@@ -321,7 +321,7 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerUltimate', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled) return;
+      if (!entity || entity.controlled || this.isStunned(entity)) return;
       entity.ultimateReady = true;
       entity.ultimateHits = 3;
       this.performUltimate(entity, payload.dirX, payload.dirY, true);
@@ -778,11 +778,13 @@ export class GameScene {
   castAinUltimate(owner) {
     this.playAttackProximitySound(owner, ['ain'], '/assets/audio/ain-ultimate-shout.m4a', { selfVolume: 0.9, maxVolume: 0.82, minVolume: 0.2, range: 720 });
     const radius = 150;
-    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#a9f5ff', life: 0.42, maxLife: 0.42, radius });
+    const stunDuration = 1000;
+    const stunUntil = performance.now() + stunDuration;
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#a9f5ff', life: stunDuration / 1000, maxLife: stunDuration / 1000, radius });
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
       if (Math.hypot(entity.x - owner.x, entity.y - owner.y) <= radius + entity.radius) {
-        entity.stunnedUntil = Math.max(entity.stunnedUntil || 0, performance.now() + 1000);
+        entity.stunnedUntil = Math.max(entity.stunnedUntil || 0, stunUntil);
         this.effects.push({ type: 'stun', x: entity.x, y: entity.y, color: '#f8fbff', life: 1, maxLife: 1, radius: 18 });
       }
     }
