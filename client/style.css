@@ -395,3 +395,40 @@ body:has(.game-screen) .app-shell {
   bottom: max(20px, env(safe-area-inset-bottom));
   z-index: 7;
 }
+
+
+.viewport-gate {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  background: rgba(10, 14, 18, .96);
+  text-align: center;
+}
+
+.viewport-gate.visible {
+  display: grid;
+}
+
+.viewport-gate div {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
+.viewport-gate strong {
+  font-size: clamp(26px, 8vw, 42px);
+  line-height: 1.05;
+}
+
+.viewport-gate span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.viewport-gate .btn {
+  width: min(280px, 100%);
+}
