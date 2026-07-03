@@ -7,6 +7,7 @@ export class GameScene {
     this.isAiming = false;
     this.movePointerId = null;
     this.movePadBase = null;
+    this.moveAnchor = null;
     this.attackPointerId = null;
     this.attackStart = null;
     this.lastTime = 0;
@@ -131,23 +132,19 @@ export class GameScene {
 
   bindMovePad() {
     const knob = this.movePad.querySelector('span');
-    const showAt = (x, y) => {
-      this.movePadBase = { x, y };
-      this.movePad.classList.add('active');
-      this.movePad.style.left = x + 'px';
-      this.movePad.style.top = y + 'px';
-      knob.style.transform = 'translate(-50%, -50%)';
-    };
+    const maxDistance = 54;
     const reset = () => {
       this.movePointerId = null;
       this.movePadBase = null;
       this.touchVector = { x: 0, y: 0 };
-      this.movePad.classList.remove('active');
       knob.style.transform = 'translate(-50%, -50%)';
     };
+    const setAnchorFromPad = () => {
+      const rect = this.movePad.getBoundingClientRect();
+      this.moveAnchor = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    };
     const update = (point) => {
-      if (!this.movePadBase) showAt(point.clientX, point.clientY);
-      const maxDistance = 54;
+      if (!this.movePadBase) this.movePadBase = this.moveAnchor || { x: point.clientX, y: point.clientY };
       const dx = point.clientX - this.movePadBase.x;
       const dy = point.clientY - this.movePadBase.y;
       const rawLength = Math.hypot(dx, dy);
@@ -159,15 +156,19 @@ export class GameScene {
       this.touchVector = { x: x * power, y: y * power };
       knob.style.transform = 'translate(calc(-50% + ' + x * length + 'px), calc(-50% + ' + y * length + 'px))';
     };
-    const isLeftControlArea = (event) => {
+    const canStartMove = (event) => {
       if (event.target.closest('#attackPad, #exitGame, .game-hud')) return false;
-      return event.clientX < window.innerWidth * 0.58;
+      setAnchorFromPad();
+      const dx = event.clientX - this.moveAnchor.x;
+      const dy = event.clientY - this.moveAnchor.y;
+      return event.clientX < window.innerWidth * 0.58 && Math.hypot(dx, dy) <= 130;
     };
     this.onMovePointerDown = (event) => {
-      if (!isLeftControlArea(event)) return;
+      if (!canStartMove(event)) return;
       event.preventDefault();
       this.movePointerId = event.pointerId;
-      showAt(event.clientX, event.clientY);
+      this.movePadBase = { ...this.moveAnchor };
+      this.movePad.classList.add('active');
       update(event);
     };
     this.onMovePointerMove = (event) => {
@@ -176,7 +177,7 @@ export class GameScene {
     this.onMovePointerUp = (event) => {
       if (event.pointerId === this.movePointerId) reset();
     };
-    window.addEventListener('pointerdown', this.onMovePointerDown, { passive: false });
+    this.movePad.addEventListener('pointerdown', this.onMovePointerDown, { passive: false });
     window.addEventListener('pointermove', this.onMovePointerMove, { passive: false });
     window.addEventListener('pointerup', this.onMovePointerUp);
     window.addEventListener('pointercancel', this.onMovePointerUp);
@@ -537,7 +538,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
-    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.45, range: 560, speed: 900, width: 4, color: '#f8fbff', damageScale: 1.0 };
+    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.45, range: 390, speed: 850, width: 4, color: '#f8fbff', damageScale: 1.0 };
     if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.18, reloadTime: 1.15, range: 520, speed: 780, width: 6, color: '#ff75c8', damageScale: 0.54 };
     if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.18, reloadTime: 1.05, range: 112, color: '#ffcc4d', damageScale: 0.95 };
     if (id === 'jaejun') return { type: 'punch', cooldown: 0.18, reloadTime: 0.95, range: 92, color: '#9fd2ff', damageScale: 0.72 };
@@ -918,7 +919,7 @@ export class GameScene {
     window.removeEventListener('orientationchange', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
-    window.removeEventListener('pointerdown', this.onMovePointerDown);
+    this.movePad?.removeEventListener('pointerdown', this.onMovePointerDown);
     window.removeEventListener('pointermove', this.onMovePointerMove);
     window.removeEventListener('pointerup', this.onMovePointerUp);
     window.removeEventListener('pointercancel', this.onMovePointerUp);
