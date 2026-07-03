@@ -108,6 +108,7 @@ export class GameScene {
       damage: stats.basicDamage,
       speed: controlled ? 250 : 210,
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
+      ghostSpeed: 310,
       alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0
     };
   }
@@ -476,7 +477,7 @@ export class GameScene {
 
   updatePlayer(delta) {
     const player = this.getControlledEntity();
-    if (!player?.alive) return;
+    if (!player) return;
     const vector = this.getMoveVector();
     this.moveEntity(player, vector.x, vector.y, delta);
   }
@@ -519,13 +520,22 @@ export class GameScene {
     const ny = y / length;
     const oldX = entity.x;
     const oldY = entity.y;
+    entity.dirX = nx;
+    entity.dirY = ny;
+
+    if (!entity.alive) {
+      entity.x += nx * (entity.ghostSpeed || 310) * delta;
+      entity.y += ny * (entity.ghostSpeed || 310) * delta;
+      entity.x = Math.max(0, Math.min(this.map.width, entity.x));
+      entity.y = Math.max(0, Math.min(this.map.height, entity.y));
+      return;
+    }
+
     const nextX = entity.x + nx * entity.speed * delta;
     const nextY = entity.y + ny * entity.speed * delta;
     const slow = this.isWaterAt(nextX, nextY, 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
     entity.x += nx * entity.speed * slow * delta;
     entity.y += ny * entity.speed * slow * delta;
-    entity.dirX = nx;
-    entity.dirY = ny;
     this.game.mapManager.clampToArena(this.map, entity);
     const outsideArena = !this.game.mapManager.isInsideArena(this.map, entity.x, entity.y, entity.radius);
     const blockedByWall = this.isWallAt(entity.x, entity.y, entity.radius);
@@ -664,13 +674,28 @@ export class GameScene {
   }
 
   damageEntity(entity, amount) {
+    if (!entity.alive) return;
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
     if (entity.controlled) this.game.audio.playEffect('/assets/audio/hit-impact.wav', { volume: 0.78 });
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
-    if (entity.hp <= 0) entity.alive = false;
+    if (entity.hp <= 0) this.turnIntoGhost(entity);
     if (entity.controlled && this.isMultiplayer) {
       this.stateSendTimer = 0;
       this.broadcastState(1);
+    }
+  }
+
+  turnIntoGhost(entity) {
+    entity.alive = false;
+    entity.hp = 0;
+    entity.ammo = 0;
+    entity.ammoReloadTimer = 0;
+    this.effects.push({ type: 'ghost', x: entity.x, y: entity.y, color: '#dce6ff', life: 0.7, maxLife: 0.7, radius: 44 });
+    if (entity.controlled) {
+      this.isAiming = false;
+      this.attackVector.power = 0;
+      this.banner.innerHTML = '<strong>관전 모드</strong><span>유령 상태로 이동하며 남은 전투를 볼 수 있습니다.</span>';
+      window.setTimeout(() => { if (!this.finished && this.banner) this.banner.innerHTML = ''; }, 1800);
     }
   }
 
@@ -754,6 +779,7 @@ export class GameScene {
     this.projectiles.forEach((projectile) => this.drawProjectile(ctx, projectile));
     this.entities.forEach((entity) => { if (this.canSeeEntity(entity)) this.drawEntity(ctx, entity); });
     ctx.restore();
+    this.drawGhostOverlay(ctx);
     this.drawMinimap(ctx);
   }
 
@@ -767,10 +793,11 @@ export class GameScene {
   }
 
   canSeeEntity(entity) {
-    if (!entity.alive) return false;
     if (entity.controlled) return true;
+    if (!entity.alive) return false;
     const player = this.getControlledEntity();
     if (!player) return true;
+    if (!player.alive) return true;
     const entityBushKey = this.getBushKey(entity);
     if (!entityBushKey) return true;
     const playerBushKey = this.getBushKey(player);
@@ -811,7 +838,10 @@ export class GameScene {
   }
 
   drawEntity(ctx, entity) {
-    if (!entity.alive) return;
+    if (!entity.alive) {
+      if (entity.controlled) this.drawGhostEntity(ctx, entity);
+      return;
+    }
     ctx.save();
     ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
     ctx.shadowBlur = 16;
@@ -871,6 +901,44 @@ export class GameScene {
     ctx.restore();
   }
 
+  drawGhostEntity(ctx, entity) {
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.shadowColor = 'rgba(220, 230, 255, .75)';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = 'rgba(220, 230, 255, .52)';
+    ctx.beginPath();
+    ctx.arc(entity.x, entity.y - 3, entity.radius * 0.92, Math.PI, 0);
+    ctx.lineTo(entity.x + entity.radius * 0.72, entity.y + entity.radius * 0.9);
+    ctx.quadraticCurveTo(entity.x + entity.radius * 0.24, entity.y + entity.radius * 0.55, entity.x, entity.y + entity.radius * 0.95);
+    ctx.quadraticCurveTo(entity.x - entity.radius * 0.24, entity.y + entity.radius * 0.55, entity.x - entity.radius * 0.72, entity.y + entity.radius * 0.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(35, 45, 70, .72)';
+    ctx.beginPath();
+    ctx.arc(entity.x - 6, entity.y - 4, 2.6, 0, Math.PI * 2);
+    ctx.arc(entity.x + 6, entity.y - 4, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.font = '800 12px system-ui';
+    ctx.fillStyle = 'rgba(240,245,255,.9)';
+    ctx.fillText('관전 중', entity.x, entity.y - 34);
+    ctx.restore();
+  }
+
+  drawGhostOverlay(ctx) {
+    const player = this.getControlledEntity();
+    if (player?.alive !== false) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(120, 128, 138, .34)';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.fillStyle = 'rgba(6, 8, 12, .18)';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.restore();
+  }
+
   drawProjectile(ctx, projectile) {
     ctx.save();
     ctx.fillStyle = projectile.color;
@@ -920,8 +988,8 @@ export class GameScene {
     ctx.strokeStyle = 'rgba(255,255,255,.55)';
     ctx.strokeRect(x, y, size, size);
     for (const entity of this.entities) {
-      if (!entity.alive) continue;
-      ctx.fillStyle = entity.color;
+      if (!entity.alive && !entity.controlled) continue;
+      ctx.fillStyle = entity.alive ? entity.color : 'rgba(220,230,255,.8)';
       ctx.beginPath();
       ctx.arc(x + (entity.x / this.map.width) * size, y + (entity.y / this.map.height) * size, entity.controlled ? 4 : 3, 0, Math.PI * 2);
       ctx.fill();
