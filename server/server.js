@@ -93,6 +93,12 @@ io.on('connection', (socket) => {
     socket.to(room.code).emit('playerAttack', { ...payload, playerId: socket.id });
   }));
 
+  socket.on('playerUltimate', (payload = {}) => handle(socket, () => {
+    const room = roomManager.get(payload.code);
+    if (!room) return;
+    socket.to(room.code).emit('playerUltimate', { ...payload, playerId: socket.id });
+  }));
+
   socket.on('endGame', (payload = {}) => handle(socket, () => {
     const room = roomManager.get(payload.code);
     if (!room) return;

@@ -1178,3 +1178,76 @@ body:not(.viewport-activated) #app {
   object-fit: cover;
   background: #02030a;
 }
+
+
+.ultimate-pad {
+  position: fixed;
+  right: max(42px, calc(env(safe-area-inset-right) + 42px));
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + clamp(96px, 14vw, 128px));
+  z-index: 7;
+  width: clamp(70px, 10vw, 92px);
+  height: clamp(70px, 10vw, 92px);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(80, 120, 255, .18);
+  border: 1px solid rgba(130, 220, 255, .42);
+  box-shadow: 0 0 24px rgba(77, 244, 255, .18);
+  color: rgba(255,255,255,.92);
+  font-weight: 950;
+  touch-action: none;
+  pointer-events: auto;
+  user-select: none;
+  opacity: .78;
+}
+
+.ultimate-pad.ready {
+  opacity: 1;
+  background: rgba(77, 244, 255, .28);
+  box-shadow: 0 0 30px rgba(77, 244, 255, .48);
+}
+
+.ultimate-pad.disabled {
+  filter: grayscale(.35);
+}
+
+.ultimate-pad span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46%;
+  height: 46%;
+  border-radius: 50%;
+  background: #4df4ff;
+  box-shadow: 0 0 22px rgba(77,244,255,.45);
+  transform: translate(-50%, -50%);
+}
+
+.ultimate-pad b,
+.ultimate-pad small {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ultimate-pad b {
+  color: #06141c;
+  font-size: 15px;
+}
+
+.ultimate-pad small {
+  position: absolute;
+  bottom: 9px;
+  color: #eaffff;
+  font-size: 10px;
+  text-shadow: 0 1px 4px rgba(0,0,0,.65);
+}
+
+@media (max-width: 760px) {
+  .ultimate-pad {
+    width: 72px;
+    height: 72px;
+    right: max(34px, env(safe-area-inset-right));
+    bottom: calc(max(18px, env(safe-area-inset-bottom)) + 104px);
+  }
+}

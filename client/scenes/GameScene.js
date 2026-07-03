@@ -10,6 +10,9 @@ export class GameScene {
     this.moveAnchor = null;
     this.attackPointerId = null;
     this.attackStart = null;
+    this.ultimatePointerId = null;
+    this.ultimateStart = null;
+    this.ultimateVector = { x: 0, y: -1, power: 0 };
     this.lastTime = 0;
     this.attackCooldown = 0;
     this.finished = false;
@@ -33,6 +36,7 @@ export class GameScene {
       '<section class="arena-wrap"><canvas id="gameCanvas" class="game-canvas"></canvas></section>' +
       '<section class="mobile-controls">' +
       '<div id="movePad" class="move-pad"><span></span></div>' +
+      '<div id="ultimatePad" class="ultimate-pad"><span></span><b>궁</b><small>0/3</small></div>' +
       '<div id="attackPad" class="attack-pad"><span></span><b>공격</b></div>' +
       '</section>' +
       '<section class="rotate-hint"><strong>가로로 돌려주세요</strong><span>전투는 가로 화면에 맞춰져 있습니다.</span></section>' +
@@ -47,6 +51,7 @@ export class GameScene {
     this.exitButton = document.querySelector('#exitGame');
     this.movePad = document.querySelector('#movePad');
     this.attackPad = document.querySelector('#attackPad');
+    this.ultimatePad = document.querySelector('#ultimatePad');
     this.resize();
     this.setupMatch();
     this.bind();
@@ -109,7 +114,8 @@ export class GameScene {
       speed: controlled ? 250 : 210,
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
       ghostSpeed: 310,
-      alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0
+      alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0,
+      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0
     };
   }
 
@@ -128,6 +134,7 @@ export class GameScene {
     this.exitButton.addEventListener('click', () => this.endScene());
     this.bindMovePad();
     this.bindAttackPad();
+    this.bindUltimatePad();
     this.bindMultiplayer();
   }
 
@@ -158,7 +165,7 @@ export class GameScene {
       knob.style.transform = 'translate(calc(-50% + ' + x * length + 'px), calc(-50% + ' + y * length + 'px))';
     };
     const canStartMove = (event) => {
-      if (event.target.closest('#attackPad, #exitGame, .game-hud')) return false;
+      if (event.target.closest('#attackPad, #ultimatePad, #exitGame, .game-hud')) return false;
       setAnchorFromPad();
       const dx = event.clientX - this.moveAnchor.x;
       const dy = event.clientY - this.moveAnchor.y;
@@ -195,7 +202,7 @@ export class GameScene {
     };
     const update = (point) => {
       const vector = this.padVector(this.attackPad, point, 42);
-      const player = this.entities[0];
+      const player = this.getControlledEntity();
       this.isAiming = vector.power > 0.12;
       this.attackVector = { x: vector.x, y: vector.y, power: vector.power };
       if (this.isAiming && player) {
@@ -231,6 +238,45 @@ export class GameScene {
     this.attackPad.addEventListener('lostpointercapture', reset);
   }
 
+  bindUltimatePad() {
+    const knob = this.ultimatePad.querySelector('span');
+    const reset = () => {
+      this.ultimatePointerId = null;
+      this.ultimateStart = null;
+      this.ultimateVector = { x: 0, y: -1, power: 0 };
+      knob.style.transform = 'translate(-50%, -50%)';
+    };
+    const update = (point) => {
+      const vector = this.padVector(this.ultimatePad, point, 36);
+      const player = this.getControlledEntity();
+      this.ultimateVector = { x: vector.x, y: vector.y, power: vector.power };
+      if (vector.power > 0.12 && player?.alive) {
+        player.dirX = vector.x;
+        player.dirY = vector.y;
+      }
+      knob.style.transform = 'translate(calc(-50% + ' + vector.knobX + 'px), calc(-50% + ' + vector.knobY + 'px))';
+    };
+    const release = (event) => {
+      if (event.pointerId !== this.ultimatePointerId) return;
+      const vector = { ...this.ultimateVector };
+      reset();
+      this.performUltimate(this.getControlledEntity(), vector.x || 0, vector.y || -1);
+    };
+    this.ultimatePad.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      this.ultimatePointerId = event.pointerId;
+      this.ultimateStart = { x: event.clientX, y: event.clientY };
+      this.ultimatePad.setPointerCapture(event.pointerId);
+      update(event);
+    });
+    this.ultimatePad.addEventListener('pointermove', (event) => {
+      if (event.pointerId === this.ultimatePointerId) update(event);
+    });
+    this.ultimatePad.addEventListener('pointerup', release);
+    this.ultimatePad.addEventListener('pointercancel', reset);
+    this.ultimatePad.addEventListener('lostpointercapture', reset);
+  }
+
   padVector(pad, point, maxDistance) {
     const rect = pad.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
@@ -261,6 +307,8 @@ export class GameScene {
       entity.dirY = payload.dirY;
       if (typeof payload.ammo === 'number') entity.ammo = payload.ammo;
       if (typeof payload.ammoReloadTimer === 'number') entity.ammoReloadTimer = payload.ammoReloadTimer;
+      if (typeof payload.ultimateHits === 'number') entity.ultimateHits = payload.ultimateHits;
+      if (typeof payload.ultimateReady === 'boolean') entity.ultimateReady = payload.ultimateReady;
     }));
 
     this.networkUnsubs.push(this.game.network.on('playerAttack', (payload) => {
@@ -269,6 +317,14 @@ export class GameScene {
       entity.ammo = Math.max(0, entity.ammo - 1);
       if (entity.ammo < entity.maxAmmo && entity.ammoReloadTimer <= 0) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
       this.performAttack(entity, payload.dirX, payload.dirY, true, true);
+    }));
+
+    this.networkUnsubs.push(this.game.network.on('playerUltimate', (payload) => {
+      const entity = this.entities.find((item) => item.id === payload.playerId);
+      if (!entity || entity.controlled) return;
+      entity.ultimateReady = true;
+      entity.ultimateHits = 3;
+      this.performUltimate(entity, payload.dirX, payload.dirY, true);
     }));
   }
 
@@ -288,7 +344,9 @@ export class GameScene {
       dirX: player.dirX,
       dirY: player.dirY,
       ammo: player.ammo,
-      ammoReloadTimer: player.ammoReloadTimer
+      ammoReloadTimer: player.ammoReloadTimer,
+      ultimateHits: player.ultimateHits,
+      ultimateReady: player.ultimateReady
     });
   }
 
@@ -477,7 +535,7 @@ export class GameScene {
 
   updatePlayer(delta) {
     const player = this.getControlledEntity();
-    if (!player) return;
+    if (!player || this.isStunned(player)) return;
     const vector = this.getMoveVector();
     this.moveEntity(player, vector.x, vector.y, delta);
   }
@@ -495,7 +553,7 @@ export class GameScene {
 
   updateBots(delta) {
     const alive = this.entities.filter((entity) => entity.alive);
-    for (const bot of this.entities.filter((entity) => !entity.controlled && entity.alive)) {
+    for (const bot of this.entities.filter((entity) => !entity.controlled && entity.alive && !this.isStunned(entity))) {
       const target = alive.filter((entity) => entity.id !== bot.id).sort((a, b) => this.distance(bot, a) - this.distance(bot, b))[0];
       if (!target) continue;
       const dx = target.x - bot.x;
@@ -534,8 +592,9 @@ export class GameScene {
     const nextX = entity.x + nx * entity.speed * delta;
     const nextY = entity.y + ny * entity.speed * delta;
     const slow = this.isWaterAt(nextX, nextY, 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
-    entity.x += nx * entity.speed * slow * delta;
-    entity.y += ny * entity.speed * slow * delta;
+    const boost = performance.now() < (entity.speedBoostUntil || 0) ? 2 : 1;
+    entity.x += nx * entity.speed * boost * slow * delta;
+    entity.y += ny * entity.speed * boost * slow * delta;
     this.game.mapManager.clampToArena(this.map, entity);
     const outsideArena = !this.game.mapManager.isInsideArena(this.map, entity.x, entity.y, entity.radius);
     const blockedByWall = this.isWallAt(entity.x, entity.y, entity.radius);
@@ -586,7 +645,7 @@ export class GameScene {
   }
 
   performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
-    if (!owner?.alive) return;
+    if (!owner?.alive || this.isStunned(owner)) return;
     if (owner.controlled && !ignorePlayerCooldown && this.attackCooldown > 0) return;
     const length = Math.hypot(dirX, dirY) || 1;
     const nx = dirX / length;
@@ -648,7 +707,7 @@ export class GameScene {
       if (!entity.alive || entity.id === owner.id) continue;
       const distance = Math.hypot(entity.x - hitX, entity.y - hitY);
       if (distance <= (entity.hitRadius || entity.radius) + profile.range * 0.55) {
-        this.damageEntity(entity, owner.damage * profile.damageScale);
+        this.damageEntity(entity, owner.damage * profile.damageScale, owner);
       }
     }
   }
@@ -673,16 +732,87 @@ export class GameScene {
     });
   }
 
-  damageEntity(entity, amount) {
+  damageEntity(entity, amount, source = null) {
     if (!entity.alive) return;
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
     if (entity.controlled) this.game.audio.playEffect('/assets/audio/hit-impact.wav', { volume: 0.78 });
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
+    if (source && source.id !== entity.id && source.alive) this.addUltimateHit(source);
     if (entity.hp <= 0) this.turnIntoGhost(entity);
     if (entity.controlled && this.isMultiplayer) {
       this.stateSendTimer = 0;
       this.broadcastState(1);
     }
+  }
+
+  addUltimateHit(entity) {
+    if (!['ain', 'jaejun', 'seojun'].includes(entity?.character?.id)) return;
+    if (entity.ultimateReady) return;
+    entity.ultimateHits = Math.min(3, (entity.ultimateHits || 0) + 1);
+    if (entity.ultimateHits >= 3) entity.ultimateReady = true;
+  }
+
+  isStunned(entity) {
+    return performance.now() < (entity?.stunnedUntil || 0);
+  }
+
+  performUltimate(owner, dirX, dirY, fromNetwork = false) {
+    if (!owner?.alive || this.isStunned(owner)) return;
+    if (!owner.ultimateReady && !fromNetwork) return;
+    const length = Math.hypot(dirX, dirY) || 1;
+    const nx = dirX / length;
+    const ny = dirY / length;
+    owner.dirX = nx;
+    owner.dirY = ny;
+    owner.ultimateReady = false;
+    owner.ultimateHits = 0;
+    if (owner.controlled && this.isMultiplayer && this.game.room?.code && !fromNetwork) {
+      this.game.network.sendPlayerUltimate({ code: this.game.room.code, dirX: nx, dirY: ny });
+    }
+    const id = owner.character.id;
+    if (id === 'ain') this.castAinUltimate(owner);
+    else if (id === 'jaejun') this.castJaejunUltimate(owner);
+    else if (id === 'seojun') this.castSeojunUltimate(owner, nx, ny);
+  }
+
+  castAinUltimate(owner) {
+    const radius = 150;
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#a9f5ff', life: 0.42, maxLife: 0.42, radius });
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === owner.id) continue;
+      if (Math.hypot(entity.x - owner.x, entity.y - owner.y) <= radius + entity.radius) {
+        entity.stunnedUntil = Math.max(entity.stunnedUntil || 0, performance.now() + 1000);
+        this.effects.push({ type: 'stun', x: entity.x, y: entity.y, color: '#f8fbff', life: 1, maxLife: 1, radius: 18 });
+      }
+    }
+  }
+
+  castJaejunUltimate(owner) {
+    owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + 4000);
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffdf6b', life: 0.5, maxLife: 0.5, radius: 72 });
+  }
+
+  castSeojunUltimate(owner, nx, ny) {
+    const target = this.findNearestTarget(owner, 680);
+    this.projectiles.push({
+      ownerId: owner.id,
+      x: owner.x + nx * 28,
+      y: owner.y + ny * 28,
+      dirX: nx,
+      dirY: ny,
+      speed: 520,
+      radius: 10,
+      hitRadius: 20,
+      travelLeft: 1400,
+      damage: 3000,
+      life: 3.0,
+      color: '#ff5f6d',
+      type: 'missile',
+      homing: true,
+      chargeUltimate: false,
+      targetId: target?.id || null
+    });
+    this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: '#ff5f6d', life: 0.18, maxLife: 0.18, radius: 26 });
   }
 
   turnIntoGhost(entity) {
@@ -714,6 +844,20 @@ export class GameScene {
     for (const projectile of this.projectiles) {
       const oldX = projectile.x;
       const oldY = projectile.y;
+      if (projectile.homing) {
+        const target = this.entities.find((entity) => entity.id === projectile.targetId && entity.alive) || this.findNearestProjectileTarget(projectile);
+        if (target) {
+          projectile.targetId = target.id;
+          const dx = target.x - projectile.x;
+          const dy = target.y - projectile.y;
+          const len = Math.hypot(dx, dy) || 1;
+          projectile.dirX = projectile.dirX * 0.82 + (dx / len) * 0.18;
+          projectile.dirY = projectile.dirY * 0.82 + (dy / len) * 0.18;
+          const dirLen = Math.hypot(projectile.dirX, projectile.dirY) || 1;
+          projectile.dirX /= dirLen;
+          projectile.dirY /= dirLen;
+        }
+      }
       const step = Math.min(projectile.speed * delta, projectile.travelLeft ?? projectile.speed * delta);
       projectile.x += projectile.dirX * step;
       projectile.y += projectile.dirY * step;
@@ -723,7 +867,8 @@ export class GameScene {
         if (!entity.alive || entity.id === projectile.ownerId) continue;
         const hitSize = (entity.hitRadius || entity.radius) + (projectile.hitRadius || projectile.radius);
         if (this.distanceToSegment(entity.x, entity.y, oldX, oldY, projectile.x, projectile.y) <= hitSize) {
-          this.damageEntity(entity, projectile.damage);
+          const owner = this.entities.find((item) => item.id === projectile.ownerId);
+          this.damageEntity(entity, projectile.damage, projectile.chargeUltimate === false ? null : owner);
           projectile.life = 0;
           break;
         }
@@ -732,6 +877,20 @@ export class GameScene {
       if ((projectile.travelLeft ?? 0) <= 0) projectile.life = 0;
     }
     this.projectiles = this.projectiles.filter((projectile) => projectile.life > 0);
+  }
+
+  findNearestProjectileTarget(projectile) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === projectile.ownerId) continue;
+      const distance = Math.hypot(entity.x - projectile.x, entity.y - projectile.y);
+      if (distance < bestDistance) {
+        best = entity;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 
   updateEffects(delta) {
@@ -744,6 +903,18 @@ export class GameScene {
     this.aliveCount.textContent = alive + '명 생존';
     const seconds = Math.floor((performance.now() - this.startedAt) / 1000);
     this.gameTimer.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+    this.updateUltimatePad();
+  }
+
+  updateUltimatePad() {
+    if (!this.ultimatePad) return;
+    const player = this.getControlledEntity();
+    const hits = Math.min(3, player?.ultimateHits || 0);
+    const ready = Boolean(player?.ultimateReady && player?.alive);
+    this.ultimatePad.classList.toggle('ready', ready);
+    this.ultimatePad.classList.toggle('disabled', !ready);
+    const label = this.ultimatePad.querySelector('small');
+    if (label) label.textContent = ready ? 'READY' : hits + '/3';
   }
 
   checkWinner() {
@@ -900,6 +1071,16 @@ export class GameScene {
     ctx.strokeText(hpText, entity.x, barY + barHeight / 2 + 0.5);
     ctx.fillText(hpText, entity.x, barY + barHeight / 2 + 0.5);
 
+    const statusY = barY + barHeight + 4;
+    if (this.isStunned(entity)) {
+      ctx.font = '900 13px system-ui';
+      ctx.fillStyle = '#f8fbff';
+      ctx.strokeStyle = 'rgba(0,0,0,.72)';
+      ctx.lineWidth = 3;
+      ctx.strokeText('STUN', entity.x, statusY + 7);
+      ctx.fillText('STUN', entity.x, statusY + 7);
+    }
+
     const ammoY = barY + barHeight + 5;
     const ammoWidth = 22;
     const ammoHeight = 7;
@@ -914,6 +1095,19 @@ export class GameScene {
       if (i < entity.ammo) {
         ctx.fillStyle = '#ff9f1a';
         ctx.fillRect(startX + i * (ammoWidth + ammoGap) + 1.5, ammoY + 1.5, ammoWidth - 3, ammoHeight - 3);
+      }
+    }
+
+    const ultY = ammoY + ammoHeight + 5;
+    const ultWidth = 18;
+    const ultGap = 4;
+    const ultStartX = entity.x - ((ultWidth * 3 + ultGap * 2) / 2);
+    for (let i = 0; i < 3; i += 1) {
+      ctx.fillStyle = 'rgba(0,0,0,.48)';
+      ctx.fillRect(ultStartX + i * (ultWidth + ultGap), ultY, ultWidth, 5);
+      if (entity.ultimateReady || i < (entity.ultimateHits || 0)) {
+        ctx.fillStyle = entity.ultimateReady ? '#4df4ff' : '#79b8ff';
+        ctx.fillRect(ultStartX + i * (ultWidth + ultGap) + 1, ultY + 1, ultWidth - 2, 3);
       }
     }
     ctx.restore();
@@ -963,8 +1157,20 @@ export class GameScene {
     ctx.shadowColor = projectile.color;
     ctx.shadowBlur = projectile.type === 'sniper' ? 18 : 10;
     ctx.beginPath();
-    ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-    ctx.fill();
+    if (projectile.type === 'missile') {
+      ctx.translate(projectile.x, projectile.y);
+      ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
+      ctx.beginPath();
+      ctx.moveTo(16, 0);
+      ctx.lineTo(-10, -7);
+      ctx.lineTo(-5, 0);
+      ctx.lineTo(-10, 7);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -981,6 +1187,17 @@ export class GameScene {
       ctx.moveTo(effect.x + effect.dx * 28, effect.y + effect.dy * 28);
       ctx.lineTo(effect.x + effect.dx * effect.range, effect.y + effect.dy * effect.range);
       ctx.stroke();
+    } else if (effect.type === 'ultimate-ring') {
+      ctx.globalAlpha = t * 0.72;
+      ctx.lineWidth = 10 * (1.1 - t);
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, (effect.radius || 80) * (1.15 - t * 0.15), 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (effect.type === 'stun') {
+      ctx.globalAlpha = t;
+      ctx.font = '900 18px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('★', effect.x, effect.y - 28 - (1 - t) * 16);
     } else if (effect.type === 'line') {
       ctx.lineWidth = 5;
       ctx.beginPath();
