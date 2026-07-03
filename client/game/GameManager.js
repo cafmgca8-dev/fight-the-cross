@@ -61,6 +61,7 @@ export class GameManager {
     this.network.on('roomJoined', (room) => { this.room = room; this.message = '방에 참가했습니다.'; this.showScene('lobby'); });
     this.network.on('roomUpdated', (room) => { this.room = room; this.refresh(); });
     this.network.on('gameStarted', (payload) => { this.room = payload.room || this.room; this.message = '게임 시작'; this.showScene('game'); });
+    this.network.on('gameEnded', (payload) => { this.room = payload.room || this.room; this.message = payload.message || '게임이 종료되었습니다.'; this.showScene('lobby'); });
     this.network.on('serverClosed', () => { this.room = null; this.message = '호스트가 서버를 종료했습니다.'; this.showScene('main'); });
     this.network.on('message', (payload) => { this.message = payload.text; if (this.currentScene !== 'game') this.refresh(); });
   }

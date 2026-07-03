@@ -93,6 +93,12 @@ io.on('connection', (socket) => {
     socket.to(room.code).emit('playerAttack', { ...payload, playerId: socket.id });
   }));
 
+  socket.on('endGame', (payload = {}) => handle(socket, () => {
+    const room = roomManager.get(payload.code);
+    if (!room) return;
+    io.to(room.code).emit('gameEnded', { ...payload, room });
+  }));
+
   socket.on('claimVictory', (payload = {}) => handle(socket, async () => {
     await saveManager.savePlayer(socket.id, payload.save);
   }));

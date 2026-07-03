@@ -18,7 +18,7 @@ export class NetworkManager {
       this.state.ping = '-';
       this.emitLocal('connectionChanged', this.state);
     });
-    ['roomCreated', 'roomJoined', 'roomUpdated', 'serverClosed', 'message', 'gameStarted', 'playerState', 'playerAttack'].forEach((event) => this.forward(event));
+    ['roomCreated', 'roomJoined', 'roomUpdated', 'serverClosed', 'message', 'gameStarted', 'gameEnded', 'playerState', 'playerAttack'].forEach((event) => this.forward(event));
     this.socket.on('pongCheck', () => {
       this.state.ping = String(Date.now() - this.lastPingAt) + 'ms';
       this.emitLocal('pingChanged', this.state);
@@ -49,6 +49,7 @@ export class NetworkManager {
   changeMode(payload) { this.socket?.emit('changeMode', payload); }
   chooseCharacter(payload) { this.socket?.emit('chooseCharacter', payload); }
   startGame(payload) { this.socket?.emit('startGame', payload); }
+  endGame(payload) { this.socket?.emit('endGame', payload); }
   openBox(payload) { this.socket?.emit('openBox', payload); }
   levelUp(payload) { this.socket?.emit('levelUp', payload); }
   claimVictory(payload) { this.socket?.emit('claimVictory', payload); }

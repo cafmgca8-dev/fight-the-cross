@@ -751,6 +751,10 @@ export class GameScene {
     if (alive.length > 1 || this.finished) return;
     this.finished = true;
     const winner = alive[0];
+    if (this.isMultiplayer && this.game.room?.code) {
+      this.finishMultiplayerMatch(winner);
+      return;
+    }
     if (winner?.controlled) {
       this.banner.innerHTML = '<strong>승리!</strong><span>상자 1개를 획득했습니다.</span><button id="rewardButton" class="btn warning">보상 받기</button>';
       document.querySelector('#rewardButton').addEventListener('click', () => {
@@ -762,6 +766,20 @@ export class GameScene {
       this.banner.innerHTML = '<strong>패배</strong><span>' + (winner?.name || '상대') + ' 생존</span><button id="retryButton" class="btn">다시 하기</button>';
       document.querySelector('#retryButton').addEventListener('click', () => this.render());
     }
+  }
+
+  finishMultiplayerMatch(winner) {
+    const isWinner = Boolean(winner?.controlled);
+    if (isWinner) this.game.recordVictory();
+    const winnerName = winner?.name || '승자';
+    const message = isWinner ? '승리! 로비로 돌아갑니다.' : winnerName + ' 승리. 로비로 돌아갑니다.';
+    this.banner.innerHTML = '<strong>' + (isWinner ? '승리!' : '게임 종료') + '</strong><span>' + message + '</span>';
+    this.game.network.endGame({ code: this.game.room.code, winnerId: winner?.id, winnerName, message });
+    window.setTimeout(() => {
+      this.cleanup();
+      this.game.message = message;
+      this.game.showScene('lobby');
+    }, 1800);
   }
 
   draw() {
