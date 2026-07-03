@@ -103,7 +103,7 @@ export class GameScene {
   createEntity(id, name, character, spawn, controlled) {
     const stats = this.game.levelManager.applyLevel(character, controlled ? (this.game.save.characters[character.id]?.level || 1) : 1);
     return {
-      id, name, character, controlled, x: spawn.x, y: spawn.y, radius: 18,
+      id, name, character, controlled, x: spawn.x, y: spawn.y, radius: 18, hitRadius: 24,
       hp: stats.hp, maxHp: stats.hp,
       damage: stats.basicDamage,
       speed: controlled ? 250 : 210,
@@ -538,8 +538,8 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
-    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.55, range: 470, speed: 880, width: 4, color: '#f8fbff', damageScale: 1.0 };
-    if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.18, reloadTime: 1.15, range: 520, speed: 780, width: 6, color: '#ff75c8', damageScale: 0.54 };
+    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 980, width: 4, hitRadius: 14, color: '#f8fbff', damageScale: 1.0 };
+    if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.18, reloadTime: 1.15, range: 520, speed: 780, width: 6, hitRadius: 13, color: '#ff75c8', damageScale: 0.54 };
     if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.18, reloadTime: 1.05, range: 112, color: '#ffcc4d', damageScale: 0.95 };
     if (id === 'jaejun') return { type: 'punch', cooldown: 0.18, reloadTime: 1.25, range: 92, color: '#9fd2ff', damageScale: 0.72 };
     return { type: 'punch', cooldown: 0.18, reloadTime: 1.28, range: 96, color: '#36d6a5', damageScale: 1 };
@@ -621,7 +621,7 @@ export class GameScene {
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
       const distance = Math.hypot(entity.x - hitX, entity.y - hitY);
-      if (distance <= entity.radius + profile.range * 0.55) {
+      if (distance <= (entity.hitRadius || entity.radius) + profile.range * 0.55) {
         this.damageEntity(entity, owner.damage * profile.damageScale);
       }
     }
@@ -630,13 +630,18 @@ export class GameScene {
   fireProjectile(owner, nx, ny, profile, offsetX, offsetY) {
     this.projectiles.push({
       ownerId: owner.id,
-      x: owner.x + nx * 34 + offsetX,
-      y: owner.y + ny * 34 + offsetY,
+      x: owner.x + nx * 28 + offsetX,
+      y: owner.y + ny * 28 + offsetY,
+      dirX: nx,
+      dirY: ny,
       vx: nx * profile.speed,
       vy: ny * profile.speed,
+      speed: profile.speed,
       radius: profile.width,
+      hitRadius: profile.hitRadius || profile.width,
+      travelLeft: Math.max(0, profile.range - 28),
       damage: owner.damage * profile.damageScale,
-      life: Math.max(0.05, (profile.range - 34) / profile.speed),
+      life: Math.max(0.05, (profile.range - 28) / profile.speed),
       color: profile.color,
       type: profile.type
     });
@@ -665,18 +670,24 @@ export class GameScene {
 
   updateProjectiles(delta) {
     for (const projectile of this.projectiles) {
-      projectile.x += projectile.vx * delta;
-      projectile.y += projectile.vy * delta;
+      const oldX = projectile.x;
+      const oldY = projectile.y;
+      const step = Math.min(projectile.speed * delta, projectile.travelLeft ?? projectile.speed * delta);
+      projectile.x += projectile.dirX * step;
+      projectile.y += projectile.dirY * step;
+      projectile.travelLeft = (projectile.travelLeft ?? 0) - step;
       projectile.life -= delta;
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === projectile.ownerId) continue;
-        if (Math.hypot(entity.x - projectile.x, entity.y - projectile.y) < entity.radius + projectile.radius) {
+        const hitSize = (entity.hitRadius || entity.radius) + (projectile.hitRadius || projectile.radius);
+        if (this.distanceToSegment(entity.x, entity.y, oldX, oldY, projectile.x, projectile.y) <= hitSize) {
           this.damageEntity(entity, projectile.damage);
           projectile.life = 0;
           break;
         }
       }
       if (this.isWallAt(projectile.x, projectile.y, 2) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) projectile.life = 0;
+      if ((projectile.travelLeft ?? 0) <= 0) projectile.life = 0;
     }
     this.projectiles = this.projectiles.filter((projectile) => projectile.life > 0);
   }
@@ -901,6 +912,16 @@ export class GameScene {
     ctx.strokeStyle = 'rgba(54,214,165,.85)';
     ctx.strokeRect(x + (this.camera.x / this.map.width) * size, y + (this.camera.y / this.map.height) * size, (this.camera.width / this.map.width) * size, (this.camera.height / this.map.height) * size);
     ctx.restore();
+  }
+
+  distanceToSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lengthSq = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
+    const closestX = ax + dx * t;
+    const closestY = ay + dy * t;
+    return Math.hypot(px - closestX, py - closestY);
   }
 
   distance(a, b) {
