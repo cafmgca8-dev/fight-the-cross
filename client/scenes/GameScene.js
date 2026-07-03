@@ -530,7 +530,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
-    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.95, range: 760, speed: 980, width: 4, color: '#f8fbff', damageScale: 1.08 };
+    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 1.05, range: 560, speed: 900, width: 4, color: '#f8fbff', damageScale: 1.0 };
     if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.7, range: 520, speed: 780, width: 6, color: '#ff75c8', damageScale: 0.54 };
     if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.82, range: 112, color: '#ffcc4d', damageScale: 0.95 };
     if (id === 'jaejun') return { type: 'punch', cooldown: 0.62, range: 92, color: '#9fd2ff', damageScale: 0.72 };
