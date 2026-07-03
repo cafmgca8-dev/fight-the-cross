@@ -592,7 +592,7 @@ export class GameScene {
     const nextX = entity.x + nx * entity.speed * delta;
     const nextY = entity.y + ny * entity.speed * delta;
     const slow = this.isWaterAt(nextX, nextY, 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
-    const boost = performance.now() < (entity.speedBoostUntil || 0) ? 2 : 1;
+    const boost = performance.now() < (entity.speedBoostUntil || 0) ? (entity.speedBoostMultiplier || 3) : 1;
     entity.x += nx * entity.speed * boost * slow * delta;
     entity.y += ny * entity.speed * boost * slow * delta;
     this.game.mapManager.clampToArena(this.map, entity);
@@ -788,8 +788,9 @@ export class GameScene {
   }
 
   castJaejunUltimate(owner) {
-    owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + 4000);
-    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffdf6b', life: 0.5, maxLife: 0.5, radius: 72 });
+    owner.speedBoostMultiplier = 3.2;
+    owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + 4200);
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffdf6b', life: 0.62, maxLife: 0.62, radius: 105 });
   }
 
   castSeojunUltimate(owner, nx, ny) {
@@ -1266,6 +1267,5 @@ export class GameScene {
     window.removeEventListener('pointercancel', this.onMovePointerUp);
     this.networkUnsubs.forEach((unsubscribe) => unsubscribe());
     this.networkUnsubs = [];
-    if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => {});
   }
 }
