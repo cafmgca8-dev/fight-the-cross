@@ -774,8 +774,8 @@ export class GameScene {
       shrinkDuration: 155,
       tick: 0.65,
       timer: 0,
-      baseDps: 85,
-      maxDps: 230
+      baseDps: 180,
+      maxDps: 520
     };
   }
 
