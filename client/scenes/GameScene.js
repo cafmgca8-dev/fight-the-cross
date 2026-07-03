@@ -776,6 +776,7 @@ export class GameScene {
   }
 
   castAinUltimate(owner) {
+    this.playAttackProximitySound(owner, ['ain'], '/assets/audio/ain-ultimate-shout.m4a', { selfVolume: 0.9, maxVolume: 0.82, minVolume: 0.2, range: 720 });
     const radius = 150;
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#a9f5ff', life: 0.42, maxLife: 0.42, radius });
     for (const entity of this.entities) {
