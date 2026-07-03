@@ -6,6 +6,7 @@ export class GameScene {
     this.attackVector = { x: 0, y: -1, power: 0 };
     this.isAiming = false;
     this.movePointerId = null;
+    this.movePadBase = null;
     this.attackPointerId = null;
     this.attackStart = null;
     this.lastTime = 0;
@@ -130,28 +131,55 @@ export class GameScene {
 
   bindMovePad() {
     const knob = this.movePad.querySelector('span');
+    const showAt = (x, y) => {
+      this.movePadBase = { x, y };
+      this.movePad.classList.add('active');
+      this.movePad.style.left = x + 'px';
+      this.movePad.style.top = y + 'px';
+      knob.style.transform = 'translate(-50%, -50%)';
+    };
     const reset = () => {
       this.movePointerId = null;
+      this.movePadBase = null;
       this.touchVector = { x: 0, y: 0 };
+      this.movePad.classList.remove('active');
       knob.style.transform = 'translate(-50%, -50%)';
     };
     const update = (point) => {
-      const vector = this.padVector(this.movePad, point, 42);
-      this.touchVector = { x: vector.x * vector.power, y: vector.y * vector.power };
-      knob.style.transform = 'translate(calc(-50% + ' + vector.knobX + 'px), calc(-50% + ' + vector.knobY + 'px))';
+      if (!this.movePadBase) showAt(point.clientX, point.clientY);
+      const maxDistance = 54;
+      const dx = point.clientX - this.movePadBase.x;
+      const dy = point.clientY - this.movePadBase.y;
+      const rawLength = Math.hypot(dx, dy);
+      const length = Math.min(maxDistance, rawLength);
+      const angle = Math.atan2(dy, dx);
+      const x = rawLength < 1 ? 0 : Math.cos(angle);
+      const y = rawLength < 1 ? 0 : Math.sin(angle);
+      const power = length / maxDistance;
+      this.touchVector = { x: x * power, y: y * power };
+      knob.style.transform = 'translate(calc(-50% + ' + x * length + 'px), calc(-50% + ' + y * length + 'px))';
     };
-    this.movePad.addEventListener('pointerdown', (event) => {
+    const isLeftControlArea = (event) => {
+      if (event.target.closest('#attackPad, #exitGame, .game-hud')) return false;
+      return event.clientX < window.innerWidth * 0.58;
+    };
+    this.onMovePointerDown = (event) => {
+      if (!isLeftControlArea(event)) return;
       event.preventDefault();
       this.movePointerId = event.pointerId;
-      this.movePad.setPointerCapture(event.pointerId);
+      showAt(event.clientX, event.clientY);
       update(event);
-    });
-    this.movePad.addEventListener('pointermove', (event) => {
+    };
+    this.onMovePointerMove = (event) => {
       if (event.pointerId === this.movePointerId) update(event);
-    });
-    this.movePad.addEventListener('pointerup', (event) => { if (event.pointerId === this.movePointerId) reset(); });
-    this.movePad.addEventListener('pointercancel', reset);
-    this.movePad.addEventListener('lostpointercapture', reset);
+    };
+    this.onMovePointerUp = (event) => {
+      if (event.pointerId === this.movePointerId) reset();
+    };
+    window.addEventListener('pointerdown', this.onMovePointerDown, { passive: false });
+    window.addEventListener('pointermove', this.onMovePointerMove, { passive: false });
+    window.addEventListener('pointerup', this.onMovePointerUp);
+    window.addEventListener('pointercancel', this.onMovePointerUp);
   }
 
   bindAttackPad() {
@@ -850,6 +878,10 @@ export class GameScene {
     window.removeEventListener('orientationchange', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    window.removeEventListener('pointerdown', this.onMovePointerDown);
+    window.removeEventListener('pointermove', this.onMovePointerMove);
+    window.removeEventListener('pointerup', this.onMovePointerUp);
+    window.removeEventListener('pointercancel', this.onMovePointerUp);
     this.networkUnsubs.forEach((unsubscribe) => unsubscribe());
     this.networkUnsubs = [];
     if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => {});

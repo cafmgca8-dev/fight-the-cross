@@ -343,3 +343,29 @@ body:has(.game-screen) .app-shell {
     height: 96px;
   }
 }
+
+
+/* Floating movement joystick */
+.move-pad {
+  position: fixed;
+  left: 96px;
+  top: calc(100dvh - 96px);
+  z-index: 7;
+  transform: translate(-50%, -50%) scale(.86);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .08s ease, transform .08s ease;
+}
+
+.move-pad.active {
+  opacity: .9;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.mobile-controls {
+  pointer-events: none;
+}
+
+.attack-pad {
+  pointer-events: auto;
+}
