@@ -26,6 +26,15 @@ export class AudioManager {
     oscillator.stop(context.currentTime + 0.05);
   }
 
+  playEffect(src, options = {}) {
+    if (!this.enabled) return;
+    const config = { volume: 0.72, ...options };
+    const sound = new Audio(src);
+    sound.volume = config.volume;
+    const promise = sound.play();
+    if (promise?.catch) promise.catch(() => {});
+  }
+
   playMusic(src, options = {}) {
     const config = { loop: true, volume: 0.45, ...options };
     this.pendingMusic = { src, options: config };

@@ -649,6 +649,7 @@ export class GameScene {
 
   damageEntity(entity, amount) {
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
+    if (entity.controlled) this.game.audio.playEffect('/assets/audio/hit-impact.wav', { volume: 0.78 });
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
     if (entity.hp <= 0) entity.alive = false;
     if (entity.controlled && this.isMultiplayer) {
