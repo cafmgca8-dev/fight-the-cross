@@ -830,3 +830,306 @@ body:has(.desert-screen) .app-shell {
     grid-column: 2 / -1;
   }
 }
+
+
+/* Mobile one-screen lobby fit */
+body:has(.desert-screen) {
+  overflow: hidden;
+}
+
+.desert-screen {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+@media (max-width: 940px) and (orientation: landscape) {
+  .desert-screen {
+    min-height: 100dvh;
+    height: 100dvh;
+  }
+
+  .desert-content {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 42vw);
+    grid-template-rows: 38px minmax(0, 1fr) 42px;
+    gap: 8px;
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+
+  .desert-content .status-bar {
+    grid-column: 1 / -1;
+    min-height: 0;
+    height: 38px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding: 4px;
+  }
+
+  .desert-content .status-item {
+    min-height: 0;
+    height: 30px;
+    padding: 3px 7px;
+    gap: 0;
+    border-radius: 6px;
+  }
+
+  .desert-content .status-label {
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .desert-content .status-value {
+    font-size: 12px;
+    line-height: 1.05;
+  }
+
+  .desert-title {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+    max-width: 96%;
+    padding: 0;
+    gap: 6px;
+  }
+
+  .desert-kicker {
+    min-height: 22px;
+    padding: 0 9px;
+    font-size: 9px;
+  }
+
+  .desert-title h1,
+  .lobby-topline h1 {
+    font-size: clamp(30px, 6.6vw, 52px);
+    line-height: .92;
+  }
+
+  .code-dock {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    align-self: end;
+    width: 100%;
+    padding: 10px;
+  }
+
+  .dock-head {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .dock-head strong {
+    font-size: 17px;
+  }
+
+  .dock-head span {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .desert-fields {
+    gap: 8px;
+  }
+
+  .desert-fields label {
+    gap: 4px;
+    font-size: 9px;
+  }
+
+  .desert-input {
+    min-height: 42px;
+    padding: 0 10px;
+    font-size: 15px;
+  }
+
+  .desert-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 8px;
+  }
+
+  .btn.desert-primary,
+  .btn.desert-gold,
+  .btn.desert-danger,
+  .btn.desert-ghost {
+    min-height: 40px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .desert-menu:not(.compact) {
+    grid-column: 1;
+    grid-row: 3;
+    width: min(430px, 100%);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin: 0;
+    align-self: end;
+  }
+
+  .desert-message {
+    grid-column: 1;
+    grid-row: 3;
+    width: min(430px, 100%);
+    min-height: 0;
+    height: 28px;
+    align-self: start;
+    padding: 5px 9px;
+    font-size: 11px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .desert-main .desert-message {
+    transform: translateY(-34px);
+  }
+
+  .lobby-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: 38px 50px minmax(0, 1fr) 28px;
+  }
+
+  .lobby-topline {
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(210px, 34vw);
+    align-items: end;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .lobby-topline .desert-kicker {
+    display: none;
+  }
+
+  .desert-menu.compact {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .lobby-grid {
+    grid-row: 3;
+    min-height: 0;
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 38vw);
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .lobby-grid .desert-dock {
+    min-height: 0;
+    height: 100%;
+    padding: 9px;
+    overflow: hidden;
+  }
+
+  .lobby-grid .dock-head {
+    min-height: 0;
+    margin-bottom: 6px;
+  }
+
+  .lobby-grid .dock-head span {
+    display: none;
+  }
+
+  .desert-list {
+    gap: 5px;
+    min-height: 0;
+  }
+
+  .desert-player,
+  .desert-mode {
+    min-height: 30px;
+    gap: 6px;
+    border-radius: 6px;
+  }
+
+  .desert-player {
+    grid-template-columns: 32px minmax(0, 1fr) 48px 56px;
+    padding: 4px 7px;
+  }
+
+  .desert-player i {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .desert-player span {
+    font-size: 12px;
+  }
+
+  .desert-player em,
+  .desert-player strong {
+    font-size: 9px;
+  }
+
+  .desert-mode {
+    padding: 0 8px;
+  }
+
+  .desert-mode span,
+  .desert-mode strong {
+    font-size: 11px;
+  }
+
+  .btn.wide {
+    min-height: 38px;
+    margin-top: 7px;
+  }
+
+  .lobby-content .desert-message {
+    grid-row: 4;
+    grid-column: 1;
+    width: 100%;
+    height: 28px;
+    align-self: stretch;
+    transform: none;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .desert-content {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 44vw);
+    gap: 6px;
+  }
+
+  .desert-title h1,
+  .lobby-topline h1 {
+    font-size: clamp(26px, 6.2vw, 42px);
+  }
+
+  .code-dock {
+    padding: 8px;
+  }
+
+  .desert-input {
+    min-height: 36px;
+  }
+
+  .btn.desert-primary,
+  .btn.desert-gold,
+  .btn.desert-danger,
+  .btn.desert-ghost {
+    min-height: 34px;
+    font-size: 12px;
+  }
+
+  .lobby-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 40vw);
+  }
+
+  .desert-player,
+  .desert-mode {
+    min-height: 26px;
+  }
+
+  .btn.wide {
+    min-height: 34px;
+  }
+}
