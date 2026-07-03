@@ -1133,3 +1133,48 @@ body:has(.desert-screen) {
     min-height: 34px;
   }
 }
+
+
+/* Intro loading flow */
+body:not(.viewport-activated) #app {
+  visibility: hidden;
+}
+
+.viewport-gate {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 199, 90, .18), transparent 32%),
+    linear-gradient(180deg, rgba(27, 10, 45, .98), rgba(13, 10, 20, .98));
+}
+
+.viewport-gate.visible {
+  display: grid;
+}
+
+.viewport-gate div {
+  padding: 22px;
+  border: 1px solid rgba(255, 210, 129, .24);
+  border-radius: 8px;
+  background: rgba(33, 16, 32, .62);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .42);
+  backdrop-filter: blur(14px);
+}
+
+.loading-video-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  place-items: center;
+  background: #02030a;
+}
+
+.loading-video-screen.visible {
+  display: grid;
+}
+
+.loading-video-screen video {
+  width: 100vw;
+  height: 100dvh;
+  object-fit: cover;
+  background: #02030a;
+}
