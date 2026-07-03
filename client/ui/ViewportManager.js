@@ -6,6 +6,8 @@ export class ViewportManager {
     this.resolveStart = null;
     this.boundActivate = () => this.activateFromGate();
     this.boundUpdate = () => this.updateOverlay();
+    this.boundResumeImmersive = () => this.keepImmersive();
+    this.boundFullscreenChange = () => this.restoreFullscreenSoon();
   }
 
   start() {
@@ -13,6 +15,7 @@ export class ViewportManager {
     this.updateOverlay(true);
     window.addEventListener('resize', this.boundUpdate);
     window.addEventListener('orientationchange', this.boundUpdate);
+    document.addEventListener('fullscreenchange', this.boundFullscreenChange);
     return new Promise((resolve) => {
       this.resolveStart = resolve;
     });
@@ -24,6 +27,8 @@ export class ViewportManager {
     document.body.classList.add('viewport-activated');
     await this.enterFullscreen();
     await this.lockLandscape();
+    document.addEventListener('pointerdown', this.boundResumeImmersive, true);
+    document.addEventListener('touchend', this.boundResumeImmersive, true);
     this.hideOverlay();
     await this.playLoadingVideo();
     this.resolveStart?.();
@@ -41,6 +46,18 @@ export class ViewportManager {
     try {
       await screen.orientation?.lock?.('landscape');
     } catch {}
+  }
+
+  async keepImmersive() {
+    if (!this.activated) return;
+    await this.enterFullscreen();
+    await this.lockLandscape();
+  }
+
+  restoreFullscreenSoon() {
+    if (!this.activated || document.fullscreenElement) return;
+    setTimeout(() => this.keepImmersive(), 80);
+    setTimeout(() => this.keepImmersive(), 420);
   }
 
   createOverlay() {

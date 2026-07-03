@@ -4,5 +4,5 @@ import { ViewportManager } from './ui/ViewportManager.js';
 const viewport = new ViewportManager();
 await viewport.start();
 
-const app = new GameManager(document.querySelector('#app'));
+const app = new GameManager(document.querySelector('#app'), viewport);
 app.boot();

@@ -18,8 +18,9 @@ import { LobbyScene } from '../scenes/LobbyScene.js';
 import { GameScene } from '../scenes/GameScene.js';
 
 export class GameManager {
-  constructor(root) {
+  constructor(root, viewport = null) {
     this.root = root;
+    this.viewport = viewport;
     this.data = new DataStore();
     this.animation = new AnimationManager();
     this.audio = new AudioManager();
@@ -71,6 +72,7 @@ export class GameManager {
     this.currentScene = name;
     this.syncSceneAudio(name);
     this.scenes[name].render();
+    if (name === 'lobby' || name === 'game') this.viewport?.keepImmersive?.();
   }
 
   syncSceneAudio(name) {

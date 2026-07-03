@@ -794,6 +794,7 @@ export class GameScene {
   }
 
   castSeojunUltimate(owner, nx, ny) {
+    this.playAttackProximitySound(owner, ['seojun'], '/assets/audio/sniper-fire.wav', { selfVolume: 0.86, maxVolume: 0.78, minVolume: 0.18, range: 880 });
     const target = this.findNearestTarget(owner, 680);
     this.projectiles.push({
       ownerId: owner.id,
