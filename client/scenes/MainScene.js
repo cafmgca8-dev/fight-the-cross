@@ -1,5 +1,58 @@
 export class MainScene {
-  constructor(game) { this.game = game; }
-  render() { const ui = this.game.ui; ui.render('<main class="screen">' + ui.statusBar(this.game.room, this.game.network.state) + '<section class="title-band"><h1>남매사기단<br>파이트 더 크로스</h1><p class="subtitle">캐릭터, 모드, 보상을 JSON으로 확장하는 멀티플레이 기반 버전</p></section><section class="grid main-grid"><div class="panel"><h2>방</h2><div class="field-stack"><input id="hostCode" class="input" placeholder="Host Code" maxlength="6"><input id="joinCode" class="input" placeholder="Join Code" maxlength="6"><div class="button-grid"><button id="openServer" class="btn">서버 열기</button><button id="closeServer" class="btn danger">서버 닫기</button><button id="joinServer" class="btn warning">참가하기</button><button id="showLobby" class="btn secondary">로비</button></div></div></div><div class="panel"><h2>메뉴</h2><div class="button-grid"><button data-scene="characters" class="btn secondary">캐릭터</button><button data-scene="boxes" class="btn secondary">상자</button><button data-scene="settings" class="btn secondary">설정</button><button data-scene="main" class="btn secondary">홈</button></div></div></section><section class="message-log">' + this.game.message + '</section></main>'); this.bind(); }
-  bind() { const input = this.game.input; document.querySelector('#openServer').addEventListener('click', () => { const code = input.normalizeCode(document.querySelector('#hostCode').value) || this.game.createShortCode(); this.game.network.createRoom({ code, nickname: this.game.save.nickname, selectedCharacterId: this.game.save.selectedCharacterId }); }); document.querySelector('#joinServer').addEventListener('click', () => { const code = input.normalizeCode(document.querySelector('#joinCode').value); this.game.network.joinRoom({ code, nickname: this.game.save.nickname, selectedCharacterId: this.game.save.selectedCharacterId }); }); document.querySelector('#closeServer').addEventListener('click', () => { if (this.game.room) this.game.network.closeRoom({ code: this.game.room.code }); }); document.querySelector('#showLobby').addEventListener('click', () => this.game.showScene('lobby')); document.querySelectorAll('[data-scene]').forEach((button) => button.addEventListener('click', () => this.game.showScene(button.dataset.scene))); }
+  constructor(game) {
+    this.game = game;
+  }
+
+  render() {
+    const ui = this.game.ui;
+    ui.render(
+      '<main class="desert-screen desert-main">' +
+        '<div class="desert-shade"></div>' +
+        '<section class="desert-content">' +
+          ui.statusBar(this.game.room, this.game.network.state) +
+          '<section class="desert-title">' +
+            '<span class="desert-kicker">MULTIPLAYER BATTLE</span>' +
+            '<h1>남매사기단<br>파이트 더 크로스</h1>' +
+          '</section>' +
+          '<section class="desert-dock code-dock" aria-label="방 코드 입력">' +
+            '<div class="dock-head"><strong>방 코드</strong><span>호스트가 방을 열거나 참가 코드를 입력하세요.</span></div>' +
+            '<div class="desert-fields">' +
+              '<label><span>Host Code</span><input id="hostCode" class="input desert-input" placeholder="예: ABCD" maxlength="6" autocomplete="off"></label>' +
+              '<label><span>Join Code</span><input id="joinCode" class="input desert-input" placeholder="참가 코드" maxlength="6" autocomplete="off"></label>' +
+            '</div>' +
+            '<div class="desert-actions">' +
+              '<button id="openServer" class="btn desert-primary">서버 열기</button>' +
+              '<button id="joinServer" class="btn desert-gold">참가하기</button>' +
+              '<button id="closeServer" class="btn desert-danger">서버 닫기</button>' +
+              '<button id="showLobby" class="btn desert-ghost">로비</button>' +
+            '</div>' +
+          '</section>' +
+          '<nav class="desert-menu" aria-label="메뉴">' +
+            '<button data-scene="characters" class="btn desert-ghost">캐릭터</button>' +
+            '<button data-scene="boxes" class="btn desert-ghost">상자</button>' +
+            '<button data-scene="settings" class="btn desert-ghost">설정</button>' +
+          '</nav>' +
+          '<section class="desert-message">' + this.game.message + '</section>' +
+        '</section>' +
+      '</main>'
+    );
+    this.bind();
+  }
+
+  bind() {
+    const input = this.game.input;
+    document.querySelector('#openServer').addEventListener('click', () => {
+      const code = input.normalizeCode(document.querySelector('#hostCode').value) || this.game.createShortCode();
+      this.game.network.createRoom({ code, nickname: this.game.save.nickname, selectedCharacterId: this.game.save.selectedCharacterId });
+    });
+    document.querySelector('#joinServer').addEventListener('click', () => {
+      const code = input.normalizeCode(document.querySelector('#joinCode').value);
+      this.game.network.joinRoom({ code, nickname: this.game.save.nickname, selectedCharacterId: this.game.save.selectedCharacterId });
+    });
+    document.querySelector('#closeServer').addEventListener('click', () => {
+      if (this.game.room) this.game.network.closeRoom({ code: this.game.room.code });
+    });
+    document.querySelector('#showLobby').addEventListener('click', () => this.game.showScene('lobby'));
+    document.querySelectorAll('[data-scene]').forEach((button) => button.addEventListener('click', () => this.game.showScene(button.dataset.scene)));
+  }
 }

@@ -432,3 +432,401 @@ body:has(.game-screen) .app-shell {
 .viewport-gate .btn {
   width: min(280px, 100%);
 }
+
+
+/* Desert lobby screens */
+body:has(.desert-screen) {
+  overflow-x: hidden;
+  background: #251338;
+}
+
+body:has(.desert-screen) .app-shell {
+  min-height: 100dvh;
+  padding: 0;
+}
+
+.desert-screen {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #2b1642 url('./assets/ui/desert-lobby.png') center / cover no-repeat;
+}
+
+.desert-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: url('./assets/ui/desert-lobby.png') center / cover no-repeat;
+  transform: scale(1.01);
+}
+
+.desert-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(18, 9, 33, .72), rgba(38, 14, 42, .2) 44%, rgba(18, 9, 33, .64)),
+    linear-gradient(0deg, rgba(72, 26, 18, .68), rgba(36, 11, 55, .12) 44%, rgba(36, 11, 74, .38));
+}
+
+.desert-content {
+  width: min(1180px, 100%);
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 18px;
+  padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+.desert-content .status-bar {
+  position: relative;
+  top: auto;
+  z-index: 3;
+  background: rgba(58, 24, 39, .54);
+  border-color: rgba(255, 199, 111, .26);
+  box-shadow: 0 14px 34px rgba(57, 18, 28, .28);
+}
+
+.desert-content .status-item {
+  background: rgba(42, 21, 37, .58);
+  border: 1px solid rgba(255, 213, 143, .12);
+}
+
+.desert-content .status-label {
+  color: rgba(255, 222, 179, .72);
+}
+
+.desert-content .status-value {
+  color: #fff5dd;
+}
+
+.desert-title {
+  align-self: end;
+  max-width: 720px;
+  display: grid;
+  gap: 10px;
+  padding: 8vh 0 0;
+  text-shadow: 0 5px 24px rgba(52, 10, 24, .55);
+}
+
+.desert-kicker {
+  width: fit-content;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 206, 107, .45);
+  border-radius: 999px;
+  color: #ffe2a6;
+  background: rgba(95, 33, 45, .45);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .08em;
+}
+
+.desert-title h1,
+.lobby-topline h1 {
+  margin: 0;
+  color: #fff6df;
+  font-size: clamp(42px, 8vw, 86px);
+  line-height: .96;
+  letter-spacing: 0;
+}
+
+.desert-dock {
+  background: linear-gradient(180deg, rgba(61, 29, 43, .76), rgba(41, 20, 35, .72));
+  border: 1px solid rgba(255, 209, 136, .28);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(30, 9, 24, .42), inset 0 1px 0 rgba(255, 236, 199, .12);
+  backdrop-filter: blur(16px);
+  padding: 16px;
+}
+
+.code-dock {
+  align-self: end;
+  width: min(720px, 100%);
+}
+
+.dock-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.dock-head strong {
+  color: #fff5df;
+  font-size: 22px;
+}
+
+.dock-head span {
+  color: rgba(255, 226, 185, .76);
+  text-align: right;
+  font-size: 13px;
+}
+
+.desert-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.desert-fields label {
+  display: grid;
+  gap: 7px;
+  color: #ffe0a4;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.desert-input {
+  min-height: 62px;
+  background: rgba(28, 13, 27, .72);
+  border-color: rgba(255, 216, 151, .26);
+  color: #fff8eb;
+  font-size: 20px;
+  font-weight: 950;
+  text-transform: uppercase;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .28);
+}
+
+.desert-input::placeholder {
+  color: rgba(255, 226, 185, .42);
+}
+
+.desert-input:focus {
+  border-color: #ffd06d;
+  box-shadow: 0 0 0 3px rgba(255, 177, 66, .22), inset 0 2px 8px rgba(0,0,0,.28);
+}
+
+.desert-actions,
+.desert-menu {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.desert-menu {
+  width: min(720px, 100%);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.desert-menu.compact {
+  width: auto;
+  min-width: min(360px, 100%);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.btn.desert-primary,
+.btn.desert-gold,
+.btn.desert-danger,
+.btn.desert-ghost {
+  min-height: 62px;
+  border: 1px solid rgba(255, 231, 182, .18);
+  border-radius: 8px;
+  color: #2b1207;
+  font-weight: 950;
+  box-shadow: 0 11px 24px rgba(43, 14, 20, .28);
+}
+
+.btn.desert-primary {
+  background: linear-gradient(180deg, #ffd66c, #f08c2e);
+}
+
+.btn.desert-gold {
+  background: linear-gradient(180deg, #ffe398, #f6b33e);
+}
+
+.btn.desert-danger {
+  color: #fff4ea;
+  background: linear-gradient(180deg, #b94340, #7f262e);
+}
+
+.btn.desert-ghost {
+  color: #fff2d8;
+  background: rgba(55, 25, 42, .58);
+  border-color: rgba(255, 211, 146, .27);
+}
+
+.desert-message {
+  width: min(720px, 100%);
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  padding: 11px 14px;
+  color: #ffe2b6;
+  background: rgba(33, 16, 32, .56);
+  border: 1px solid rgba(255, 210, 144, .18);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+}
+
+.lobby-content {
+  grid-template-rows: auto auto 1fr auto;
+}
+
+.lobby-topline {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: clamp(12px, 5vh, 54px);
+  text-shadow: 0 5px 24px rgba(52, 10, 24, .55);
+}
+
+.lobby-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .82fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.desert-list {
+  display: grid;
+  gap: 9px;
+}
+
+.desert-player,
+.desert-mode {
+  min-height: 58px;
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 212, 145, .18);
+  background: rgba(34, 16, 31, .56);
+  color: #fff5df;
+}
+
+.desert-player {
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  padding: 8px 12px;
+}
+
+.desert-player i {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #351809;
+  background: #ffc35b;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.desert-player span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.desert-player em {
+  color: #ffd580;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.desert-player strong {
+  color: rgba(255, 232, 190, .78);
+  font-size: 13px;
+}
+
+.desert-mode {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.desert-mode span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.desert-mode strong {
+  color: #ffd27a;
+}
+
+.desert-mode.selected {
+  border-color: #ffd06d;
+  background: rgba(145, 65, 45, .66);
+  box-shadow: 0 0 0 3px rgba(255, 179, 59, .13);
+}
+
+.btn.wide {
+  width: 100%;
+  margin-top: 14px;
+}
+
+@media (max-width: 860px) {
+  .desert-content {
+    gap: 12px;
+  }
+
+  .desert-title {
+    padding-top: 3vh;
+  }
+
+  .desert-fields,
+  .desert-actions,
+  .desert-menu,
+  .lobby-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dock-head,
+  .lobby-topline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dock-head span {
+    text-align: left;
+  }
+
+  .desert-menu.compact {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .desert-screen::before {
+    background-position: center bottom;
+  }
+
+  .desert-content .status-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .desert-title h1,
+  .lobby-topline h1 {
+    font-size: clamp(38px, 13vw, 58px);
+  }
+
+  .desert-dock {
+    padding: 13px;
+  }
+
+  .desert-player {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+  }
+
+  .desert-player strong {
+    grid-column: 2 / -1;
+  }
+}
