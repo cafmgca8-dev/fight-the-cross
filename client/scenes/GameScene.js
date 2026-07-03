@@ -7,6 +7,7 @@ export class GameScene {
     this.isAiming = false;
     this.movePointerId = null;
     this.attackPointerId = null;
+    this.attackStart = null;
     this.lastTime = 0;
     this.attackCooldown = 0;
     this.finished = false;
@@ -157,6 +158,7 @@ export class GameScene {
     const knob = this.attackPad.querySelector('span');
     const reset = () => {
       this.attackPointerId = null;
+      this.attackStart = null;
       this.isAiming = false;
       this.attackVector.power = 0;
       knob.style.transform = 'translate(-50%, -50%)';
@@ -175,12 +177,19 @@ export class GameScene {
     const release = (event) => {
       if (event.pointerId !== this.attackPointerId) return;
       const vector = { ...this.attackVector };
+      const start = this.attackStart;
+      const moved = start ? Math.hypot(event.clientX - start.x, event.clientY - start.y) : 0;
       reset();
-      if (vector.power > 0.18) this.performAttack(this.getControlledEntity(), vector.x, vector.y);
+      if (vector.power > 0.18 && moved > 10) {
+        this.performAttack(this.getControlledEntity(), vector.x, vector.y);
+        return;
+      }
+      this.autoAttackNearest();
     };
     this.attackPad.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       this.attackPointerId = event.pointerId;
+      this.attackStart = { x: event.clientX, y: event.clientY };
       this.attackPad.setPointerCapture(event.pointerId);
       update(event);
     });
@@ -500,6 +509,36 @@ export class GameScene {
     return { type: 'punch', cooldown: 0.68, range: 96, color: '#36d6a5', damageScale: 1 };
   }
 
+  autoAttackNearest() {
+    const player = this.getControlledEntity();
+    if (!player?.alive) return;
+    const profile = this.getAttackProfile(player);
+    const target = this.findNearestTarget(player, profile.range);
+    if (!target) {
+      this.performAttack(player, player.dirX || 0, player.dirY || -1);
+      return;
+    }
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    const length = Math.hypot(dx, dy) || 1;
+    this.performAttack(player, dx / length, dy / length);
+  }
+
+  findNearestTarget(owner, maxRange) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === owner.id) continue;
+      if (!this.canSeeEntity(entity)) continue;
+      const distance = Math.hypot(entity.x - owner.x, entity.y - owner.y);
+      if (distance <= maxRange && distance < bestDistance) {
+        best = entity;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
   performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
     if (!owner?.alive) return;
     if (owner.controlled && !ignorePlayerCooldown && this.attackCooldown > 0) return;
@@ -670,7 +709,7 @@ export class GameScene {
     const player = this.getControlledEntity();
     if (!this.isAiming || !player?.alive) return;
     const profile = this.getAttackProfile(player);
-    const range = profile.type === 'punch' || profile.type === 'bat' ? profile.range * 1.8 : profile.range;
+    const range = profile.range;
     ctx.save();
     ctx.globalAlpha = 0.48;
     ctx.strokeStyle = '#ffffff';
@@ -685,7 +724,8 @@ export class GameScene {
     ctx.globalAlpha = 0.22;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(player.x + this.attackVector.x * range, player.y + this.attackVector.y * range, 20, 0, Math.PI * 2);
+    const markerRadius = profile.type === 'punch' || profile.type === 'bat' ? profile.range * 0.55 : 20;
+    ctx.arc(player.x + this.attackVector.x * range, player.y + this.attackVector.y * range, markerRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
