@@ -68,7 +68,16 @@ export class GameManager {
   showScene(name) {
     if (this.currentScene === 'game' && name !== 'game') this.scenes.game.cleanup?.();
     this.currentScene = name;
+    this.syncSceneAudio(name);
     this.scenes[name].render();
+  }
+
+  syncSceneAudio(name) {
+    if (name === 'lobby') {
+      this.audio.playMusic('/assets/audio/lobby-chase.mp3', { loop: true, volume: 0.42 });
+      return;
+    }
+    this.audio.stopMusic();
   }
 
   refresh() {
@@ -176,6 +185,7 @@ export class GameManager {
   toggleSetting(key) {
     this.save = { ...this.save, settings: { ...this.save.settings, [key]: !this.save.settings[key] } };
     this.audio.setEnabled(this.save.settings.sound);
+    if (this.currentScene === 'lobby') this.syncSceneAudio('lobby');
     this.persist();
     this.refresh();
   }
