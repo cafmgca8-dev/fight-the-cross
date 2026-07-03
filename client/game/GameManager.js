@@ -168,11 +168,6 @@ export class GameManager {
 
   startGame() {
     const mode = this.getActiveMode();
-    if (mode.id !== 'free_for_all_5') {
-      this.message = '지금은 1 vs 1 vs 1 vs 1 vs 1 모드부터 플레이할 수 있습니다.';
-      this.refresh();
-      return;
-    }
     if (this.room?.code) {
       this.message = '다른 플레이어를 전투 화면으로 이동시키는 중입니다.';
       this.network.chooseCharacter({ code: this.room.code, characterId: this.save.selectedCharacterId });

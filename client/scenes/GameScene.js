@@ -18,6 +18,7 @@ export class GameScene {
     this.finished = false;
     this.frameId = null;
     this.stateSendTimer = 0;
+    this.environmentTimer = 0;
     this.networkUnsubs = [];
     this.isMultiplayer = false;
     this.camera = { x: 0, y: 0, width: 980, height: 552 };
@@ -91,9 +92,10 @@ export class GameScene {
       const playerCharacter = this.game.characterManager.getById(this.game.save.selectedCharacterId) || owned[0] || all[0];
       const botCharacters = all.filter((character) => character.id !== playerCharacter.id);
       this.entities = [this.createEntity('player', this.game.save.nickname || '플레이어', playerCharacter, spawns[0], true)];
-      for (let i = 1; i < 5; i += 1) {
+      const localCount = Math.max(2, this.game.getActiveMode()?.maxPlayers || 5);
+      for (let i = 1; i < localCount; i += 1) {
         const character = botCharacters[(i - 1) % botCharacters.length] || all[i % all.length];
-        this.entities.push(this.createEntity('bot' + i, '상대 ' + i, character, spawns[i], false));
+        this.entities.push(this.createEntity('bot' + i, '상대 ' + i, character, spawns[i % spawns.length], false));
       }
     }
 
@@ -104,6 +106,7 @@ export class GameScene {
     this.finished = false;
     this.attackCooldown = 0;
     this.stateSendTimer = 0;
+    this.environmentTimer = 0;
     this.snapCameraToPlayer();
   }
 
@@ -299,8 +302,7 @@ export class GameScene {
     if (!this.isMultiplayer) return;
 
     this.networkUnsubs.push(this.game.network.on('playerState', (payload) => {
-      let entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity && payload.playerId) entity = this.createRemoteEntityFromState(payload);
+      const entity = this.entities.find((item) => item.id === payload.playerId);
       if (!entity || entity.controlled) return;
       entity.x = payload.x;
       entity.y = payload.y;
@@ -316,7 +318,7 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerAttack', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled) return;
+      if (!entity || entity.controlled || this.isStunned(entity)) return;
       entity.ammo = Math.max(0, entity.ammo - 1);
       if (entity.ammo < entity.maxAmmo && entity.ammoReloadTimer <= 0) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
       this.performAttack(entity, payload.dirX, payload.dirY, true, true);
@@ -324,21 +326,11 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerUltimate', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled) return;
+      if (!entity || entity.controlled || this.isStunned(entity)) return;
       entity.ultimateReady = true;
       entity.ultimateHits = 3;
       this.performUltimate(entity, payload.dirX, payload.dirY, true);
     }));
-  }
-
-  createRemoteEntityFromState(payload) {
-    const owned = this.game.characterManager.getOwned(this.game.save);
-    const all = this.game.characterManager.getAll();
-    const character = this.game.characterManager.getById(payload.characterId) || owned[0] || all[0];
-    const spawn = { x: payload.x || this.map.width / 2, y: payload.y || this.map.height / 2 };
-    const entity = this.createEntity(payload.playerId, payload.nickname || '플레이어', character, spawn, false);
-    this.entities.push(entity);
-    return entity;
   }
 
   broadcastState(delta) {
@@ -350,8 +342,6 @@ export class GameScene {
     if (!player) return;
     this.game.network.sendPlayerState({
       code: this.game.room.code,
-      nickname: player.name,
-      characterId: player.character.id,
       x: Math.round(player.x),
       y: Math.round(player.y),
       hp: player.hp,
@@ -516,15 +506,33 @@ export class GameScene {
   }
 
   isWallAt(x, y, radius = 20) {
-    return this.getAreaMaskFlags(x, y, radius).wall;
+    return this.getAreaMaskFlags(x, y, radius).wall || this.isInRectZones([...(this.map.walls || []), ...(this.map.cover || [])], x, y, radius);
   }
 
   isWaterAt(x, y, radius = 20) {
-    return this.getAreaMaskFlags(x, y, radius).water;
+    return this.getAreaMaskFlags(x, y, radius).water || this.isInRectZones(this.map.waterZones, x, y, radius);
+  }
+
+  isSnowAt(x, y, radius = 20) {
+    return this.isInRectZones(this.map.snowZones, x, y, radius);
+  }
+
+  isHealPadAt(x, y, radius = 20) {
+    return this.isInRectZones(this.map.healZones, x, y, radius);
   }
 
   isBushAt(x, y, radius = 20) {
-    return this.getAreaMaskFlags(x, y, radius).bush;
+    return this.getAreaMaskFlags(x, y, radius).bush || this.isInRectZones(this.map.foliage, x, y, radius);
+  }
+
+  isInRectZones(zones = [], x, y, radius = 0) {
+    return zones.some((zone) => x >= zone.x - radius && x <= zone.x + zone.width + radius && y >= zone.y - radius && y <= zone.y + zone.height + radius);
+  }
+
+  getTerrainSpeedMultiplier(x, y) {
+    if (this.isSnowAt(x, y, 0)) return this.map.snowSpeedMultiplier || 0.5;
+    if (this.isWaterAt(x, y, 0)) return this.map.waterSpeedMultiplier || 0.38;
+    return 1;
   }
 
   loop(now) {
@@ -538,6 +546,7 @@ export class GameScene {
   update(delta) {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.updatePlayer(delta);
+    this.updateSpecialZones(delta);
     this.updateStorm(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
@@ -607,7 +616,8 @@ export class GameScene {
 
     const nextX = entity.x + nx * entity.speed * delta;
     const nextY = entity.y + ny * entity.speed * delta;
-    const slow = this.isWaterAt(nextX, nextY, 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
+    const terrainSlow = this.getTerrainSpeedMultiplier(nextX, nextY);
+    const slow = terrainSlow;
     const boost = performance.now() < (entity.speedBoostUntil || 0) ? (entity.speedBoostMultiplier || 3) : 1;
     entity.x += nx * entity.speed * boost * slow * delta;
     entity.y += ny * entity.speed * boost * slow * delta;
@@ -661,8 +671,7 @@ export class GameScene {
   }
 
   performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
-    if (!owner?.alive) return;
-    if (!fromNetwork && this.isStunned(owner)) return;
+    if (!owner?.alive || this.isStunned(owner)) return;
     if (owner.controlled && !ignorePlayerCooldown && this.attackCooldown > 0) return;
     const length = Math.hypot(dirX, dirY) || 1;
     const nx = dirX / length;
@@ -751,6 +760,10 @@ export class GameScene {
 
   damageEntity(entity, amount, source = null) {
     if (!entity.alive) return;
+    if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) {
+      entity.hp = entity.maxHp;
+      return;
+    }
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
     if (entity.controlled) this.game.audio.playEffect('/assets/audio/hit-impact.wav', { volume: 0.78 });
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
@@ -789,6 +802,42 @@ export class GameScene {
     return { progress: raw, radius, dps };
   }
 
+  updateSpecialZones(delta) {
+    if (this.finished) return;
+    const targets = this.entities.filter((entity) => entity.alive && (entity.controlled || !this.isMultiplayer));
+    for (const entity of targets) {
+      if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) {
+        if (entity.hp < entity.maxHp) entity.hp = entity.maxHp;
+        continue;
+      }
+    }
+
+    if (!this.map?.snowZones?.length) return;
+    this.environmentTimer -= delta;
+    if (this.environmentTimer > 0) return;
+    this.environmentTimer = 0.65;
+    for (const entity of targets) {
+      if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) continue;
+      if (!this.isSnowAt(entity.x, entity.y, entity.radius || 0)) continue;
+      this.damageHazardEntity(entity, (this.map.snowDps || 130) * this.environmentTimer, '#e9f8ff');
+    }
+  }
+
+  damageHazardEntity(entity, amount, color = '#8d7cff') {
+    if (!entity.alive) return;
+    if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) {
+      entity.hp = entity.maxHp;
+      return;
+    }
+    entity.hp = Math.max(0, entity.hp - Math.round(amount));
+    this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color, life: 0.18, maxLife: 0.18, radius: 30 });
+    if (entity.hp <= 0) this.turnIntoGhost(entity);
+    if (entity.controlled && this.isMultiplayer) {
+      this.stateSendTimer = 0;
+      this.broadcastState(1);
+    }
+  }
+
   updateStorm(delta) {
     if (!this.storm || this.finished) return;
     const state = this.getStormState();
@@ -800,7 +849,7 @@ export class GameScene {
     for (const entity of targets) {
       const distance = Math.hypot(entity.x - this.storm.centerX, entity.y - this.storm.centerY);
       if (distance <= state.radius + (entity.radius || 0)) continue;
-      this.damageStormEntity(entity, state.dps * this.storm.tick);
+      this.damageHazardEntity(entity, state.dps * this.storm.tick, '#8d7cff');
     }
   }
 
@@ -827,8 +876,7 @@ export class GameScene {
   }
 
   performUltimate(owner, dirX, dirY, fromNetwork = false) {
-    if (!owner?.alive) return;
-    if (!fromNetwork && this.isStunned(owner)) return;
+    if (!owner?.alive || this.isStunned(owner)) return;
     if (!owner.ultimateReady && !fromNetwork) return;
     const length = Math.hypot(dirX, dirY) || 1;
     const nx = dirX / length;
@@ -1053,6 +1101,8 @@ export class GameScene {
 
   getBushKey(entity) {
     if (!this.isBushAt(entity.x, entity.y, 0)) return null;
+    const rectIndex = (this.map.foliage || []).findIndex((zone) => this.isInRectZones([zone], entity.x, entity.y, 0));
+    if (rectIndex >= 0) return 'foliage-' + rectIndex;
     if (!this.bushComponents) return 'single-bush-fallback';
     const gx = Math.max(0, Math.min(this.bushGridWidth - 1, Math.floor(entity.x / this.map.width * this.bushGridWidth)));
     const gy = Math.max(0, Math.min(this.bushGridHeight - 1, Math.floor(entity.y / this.map.height * this.bushGridHeight)));

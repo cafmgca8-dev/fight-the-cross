@@ -1,6 +1,325 @@
 {
   "maps": [
     {
+      "id": "snow_cross_1v1",
+      "name": "설원의 십자가",
+      "modeId": "one_vs_one",
+      "image": "/assets/maps/snow-cross-1v1.png",
+      "width": 1024,
+      "height": 1536,
+      "walkBounds": {
+        "x": 38,
+        "y": 48,
+        "width": 948,
+        "height": 1446
+      },
+      "spawnPoints": [
+        {
+          "x": 384,
+          "y": 1205
+        },
+        {
+          "x": 641,
+          "y": 390
+        }
+      ],
+      "waterZones": [
+        {
+          "x": 452,
+          "y": 654,
+          "width": 142,
+          "height": 279
+        }
+      ],
+      "snowZones": [
+        {
+          "x": 36,
+          "y": 55,
+          "width": 228,
+          "height": 228
+        },
+        {
+          "x": 760,
+          "y": 1288,
+          "width": 224,
+          "height": 205
+        }
+      ],
+      "healZones": [
+        {
+          "x": 342,
+          "y": 358,
+          "width": 72,
+          "height": 72
+        },
+        {
+          "x": 470,
+          "y": 358,
+          "width": 72,
+          "height": 72
+        },
+        {
+          "x": 604,
+          "y": 358,
+          "width": 72,
+          "height": 72
+        },
+        {
+          "x": 342,
+          "y": 1142,
+          "width": 72,
+          "height": 72
+        },
+        {
+          "x": 470,
+          "y": 1142,
+          "width": 72,
+          "height": 72
+        },
+        {
+          "x": 604,
+          "y": 1142,
+          "width": 72,
+          "height": 72
+        }
+      ],
+      "walls": [
+        {
+          "x": 260,
+          "y": 25,
+          "width": 45,
+          "height": 176
+        },
+        {
+          "x": 35,
+          "y": 205,
+          "width": 137,
+          "height": 47
+        },
+        {
+          "x": 406,
+          "y": 122,
+          "width": 210,
+          "height": 58
+        },
+        {
+          "x": 760,
+          "y": 18,
+          "width": 60,
+          "height": 160
+        },
+        {
+          "x": 855,
+          "y": 256,
+          "width": 130,
+          "height": 67
+        },
+        {
+          "x": 585,
+          "y": 255,
+          "width": 137,
+          "height": 69
+        },
+        {
+          "x": 177,
+          "y": 385,
+          "width": 132,
+          "height": 48
+        },
+        {
+          "x": 410,
+          "y": 442,
+          "width": 165,
+          "height": 48
+        },
+        {
+          "x": 720,
+          "y": 370,
+          "width": 80,
+          "height": 250
+        },
+        {
+          "x": 860,
+          "y": 525,
+          "width": 124,
+          "height": 44
+        },
+        {
+          "x": 38,
+          "y": 612,
+          "width": 136,
+          "height": 48
+        },
+        {
+          "x": 272,
+          "y": 575,
+          "width": 36,
+          "height": 145
+        },
+        {
+          "x": 404,
+          "y": 545,
+          "width": 220,
+          "height": 63
+        },
+        {
+          "x": 406,
+          "y": 608,
+          "width": 44,
+          "height": 367
+        },
+        {
+          "x": 579,
+          "y": 608,
+          "width": 47,
+          "height": 367
+        },
+        {
+          "x": 450,
+          "y": 922,
+          "width": 145,
+          "height": 68
+        },
+        {
+          "x": 806,
+          "y": 695,
+          "width": 95,
+          "height": 157
+        },
+        {
+          "x": 728,
+          "y": 847,
+          "width": 36,
+          "height": 141
+        },
+        {
+          "x": 858,
+          "y": 884,
+          "width": 127,
+          "height": 45
+        },
+        {
+          "x": 38,
+          "y": 980,
+          "width": 136,
+          "height": 45
+        },
+        {
+          "x": 177,
+          "y": 930,
+          "width": 134,
+          "height": 250
+        },
+        {
+          "x": 324,
+          "y": 887,
+          "width": 36,
+          "height": 145
+        },
+        {
+          "x": 452,
+          "y": 1072,
+          "width": 172,
+          "height": 51
+        },
+        {
+          "x": 721,
+          "y": 1125,
+          "width": 134,
+          "height": 50
+        },
+        {
+          "x": 38,
+          "y": 1252,
+          "width": 136,
+          "height": 64
+        },
+        {
+          "x": 326,
+          "y": 1248,
+          "width": 132,
+          "height": 48
+        },
+        {
+          "x": 720,
+          "y": 1306,
+          "width": 45,
+          "height": 170
+        },
+        {
+          "x": 860,
+          "y": 1288,
+          "width": 125,
+          "height": 48
+        },
+        {
+          "x": 408,
+          "y": 1378,
+          "width": 206,
+          "height": 50
+        },
+        {
+          "x": 185,
+          "y": 1340,
+          "width": 78,
+          "height": 158
+        },
+        {
+          "x": 0,
+          "y": 1488,
+          "width": 1024,
+          "height": 48
+        }
+      ],
+      "foliage": [
+        {
+          "x": 805,
+          "y": 32,
+          "width": 178,
+          "height": 148
+        },
+        {
+          "x": 720,
+          "y": 392,
+          "width": 145,
+          "height": 222
+        },
+        {
+          "x": 404,
+          "y": 548,
+          "width": 221,
+          "height": 421
+        },
+        {
+          "x": 128,
+          "y": 706,
+          "width": 96,
+          "height": 160
+        },
+        {
+          "x": 805,
+          "y": 695,
+          "width": 96,
+          "height": 158
+        },
+        {
+          "x": 132,
+          "y": 930,
+          "width": 180,
+          "height": 250
+        },
+        {
+          "x": 0,
+          "y": 1372,
+          "width": 220,
+          "height": 150
+        }
+      ],
+      "waterSpeedMultiplier": 0.42,
+      "snowSpeedMultiplier": 0.48,
+      "snowDps": 160
+    },
+    {
       "id": "resort_pool_ffa",
       "name": "리조트 풀 아레나",
       "modeId": "free_for_all_5",
