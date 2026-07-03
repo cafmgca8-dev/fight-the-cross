@@ -788,6 +788,7 @@ export class GameScene {
   }
 
   castJaejunUltimate(owner) {
+    this.playAttackProximitySound(owner, ['jaejun'], '/assets/audio/jaejun-ultimate-wind.wav', { selfVolume: 0.9, maxVolume: 0.82, minVolume: 0.18, range: 760 });
     owner.speedBoostMultiplier = 3.2;
     owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + 4200);
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffdf6b', life: 0.62, maxLife: 0.62, radius: 105 });
