@@ -597,7 +597,7 @@ export class GameScene {
     }
 
     if (profile.type === 'punch' || profile.type === 'bat') {
-      this.playPunchAttackSound(owner);
+      this.playAttackProximitySound(owner, ['ain', 'jaejun'], '/assets/audio/punch-swing.wav', { selfVolume: 0.68, maxVolume: 0.62, minVolume: 0.18, range: 520 });
       this.meleeAttack(owner, nx, ny, profile);
       return;
     }
@@ -611,23 +611,23 @@ export class GameScene {
       return;
     }
 
+    this.playAttackProximitySound(owner, ['seojun'], '/assets/audio/sniper-fire.wav', { selfVolume: 0.76, maxVolume: 0.7, minVolume: 0.16, range: 760 });
     this.fireProjectile(owner, nx, ny, profile, 0, 0);
     this.effects.push({ type: 'line', x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.14, maxLife: 0.14, range: profile.range });
   }
 
-  playPunchAttackSound(owner) {
-    if (!this.isPunchSoundCharacter(owner)) return;
+  playAttackProximitySound(owner, characterIds, src, options = {}) {
+    if (!characterIds.includes(owner?.character?.id)) return;
     const listener = this.getControlledEntity();
     if (!listener?.alive) return;
-    const audibleRange = 520;
+    const audibleRange = options.range || 560;
     const distance = owner.controlled ? 0 : Math.hypot(listener.x - owner.x, listener.y - owner.y);
     if (distance > audibleRange) return;
-    const volume = owner.controlled ? 0.68 : Math.max(0.18, 0.62 * (1 - distance / audibleRange));
-    this.game.audio.playEffect('/assets/audio/punch-swing.wav', { volume });
-  }
-
-  isPunchSoundCharacter(entity) {
-    return entity?.character?.id === 'ain' || entity?.character?.id === 'jaejun';
+    const selfVolume = options.selfVolume ?? 0.7;
+    const maxVolume = options.maxVolume ?? 0.62;
+    const minVolume = options.minVolume ?? 0.16;
+    const volume = owner.controlled ? selfVolume : Math.max(minVolume, maxVolume * (1 - distance / audibleRange));
+    this.game.audio.playEffect(src, { volume });
   }
 
   meleeAttack(owner, nx, ny, profile) {
