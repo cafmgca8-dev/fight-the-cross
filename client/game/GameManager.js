@@ -77,6 +77,10 @@ export class GameManager {
       this.audio.playMusic('/assets/audio/lobby-chase.mp3', { loop: true, volume: 0.42 });
       return;
     }
+    if (name === 'game') {
+      this.audio.playMusic('/assets/audio/battle-chase.mp3', { loop: true, volume: 0.48 });
+      return;
+    }
     this.audio.stopMusic();
   }
 
@@ -185,7 +189,7 @@ export class GameManager {
   toggleSetting(key) {
     this.save = { ...this.save, settings: { ...this.save.settings, [key]: !this.save.settings[key] } };
     this.audio.setEnabled(this.save.settings.sound);
-    if (this.currentScene === 'lobby') this.syncSceneAudio('lobby');
+    if (this.currentScene === 'lobby' || this.currentScene === 'game') this.syncSceneAudio(this.currentScene);
     this.persist();
     this.refresh();
   }
