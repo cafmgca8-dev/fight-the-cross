@@ -21,6 +21,7 @@ export class GameScene {
     this.networkUnsubs = [];
     this.isMultiplayer = false;
     this.camera = { x: 0, y: 0, width: 980, height: 552 };
+    this.storm = null;
   }
 
   render() {
@@ -99,6 +100,7 @@ export class GameScene {
     this.projectiles = [];
     this.effects = [];
     this.startedAt = performance.now();
+    this.setupStorm();
     this.finished = false;
     this.attackCooldown = 0;
     this.stateSendTimer = 0;
@@ -297,7 +299,8 @@ export class GameScene {
     if (!this.isMultiplayer) return;
 
     this.networkUnsubs.push(this.game.network.on('playerState', (payload) => {
-      const entity = this.entities.find((item) => item.id === payload.playerId);
+      let entity = this.entities.find((item) => item.id === payload.playerId);
+      if (!entity && payload.playerId) entity = this.createRemoteEntityFromState(payload);
       if (!entity || entity.controlled) return;
       entity.x = payload.x;
       entity.y = payload.y;
@@ -313,7 +316,7 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerAttack', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled || this.isStunned(entity)) return;
+      if (!entity || entity.controlled) return;
       entity.ammo = Math.max(0, entity.ammo - 1);
       if (entity.ammo < entity.maxAmmo && entity.ammoReloadTimer <= 0) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
       this.performAttack(entity, payload.dirX, payload.dirY, true, true);
@@ -321,11 +324,21 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerUltimate', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled || this.isStunned(entity)) return;
+      if (!entity || entity.controlled) return;
       entity.ultimateReady = true;
       entity.ultimateHits = 3;
       this.performUltimate(entity, payload.dirX, payload.dirY, true);
     }));
+  }
+
+  createRemoteEntityFromState(payload) {
+    const owned = this.game.characterManager.getOwned(this.game.save);
+    const all = this.game.characterManager.getAll();
+    const character = this.game.characterManager.getById(payload.characterId) || owned[0] || all[0];
+    const spawn = { x: payload.x || this.map.width / 2, y: payload.y || this.map.height / 2 };
+    const entity = this.createEntity(payload.playerId, payload.nickname || '플레이어', character, spawn, false);
+    this.entities.push(entity);
+    return entity;
   }
 
   broadcastState(delta) {
@@ -337,6 +350,8 @@ export class GameScene {
     if (!player) return;
     this.game.network.sendPlayerState({
       code: this.game.room.code,
+      nickname: player.name,
+      characterId: player.character.id,
       x: Math.round(player.x),
       y: Math.round(player.y),
       hp: player.hp,
@@ -523,6 +538,7 @@ export class GameScene {
   update(delta) {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.updatePlayer(delta);
+    this.updateStorm(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
     this.updateAmmo(delta);
@@ -645,7 +661,8 @@ export class GameScene {
   }
 
   performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
-    if (!owner?.alive || this.isStunned(owner)) return;
+    if (!owner?.alive) return;
+    if (!fromNetwork && this.isStunned(owner)) return;
     if (owner.controlled && !ignorePlayerCooldown && this.attackCooldown > 0) return;
     const length = Math.hypot(dirX, dirY) || 1;
     const nx = dirX / length;
@@ -745,6 +762,59 @@ export class GameScene {
     }
   }
 
+  setupStorm() {
+    const width = this.map?.width || 1600;
+    const height = this.map?.height || 1600;
+    this.storm = {
+      centerX: width / 2,
+      centerY: height / 2,
+      startRadius: Math.hypot(width, height) / 2 + 80,
+      finalRadius: Math.max(170, Math.min(width, height) * 0.13),
+      delay: 18,
+      shrinkDuration: 155,
+      tick: 0.65,
+      timer: 0,
+      baseDps: 85,
+      maxDps: 230
+    };
+  }
+
+  getStormState() {
+    if (!this.storm) return { progress: 0, radius: Infinity, dps: 0 };
+    const elapsed = Math.max(0, (performance.now() - this.startedAt) / 1000);
+    const raw = elapsed <= this.storm.delay ? 0 : Math.min(1, (elapsed - this.storm.delay) / this.storm.shrinkDuration);
+    const eased = raw * raw * (3 - 2 * raw);
+    const radius = this.storm.startRadius + (this.storm.finalRadius - this.storm.startRadius) * eased;
+    const dps = this.storm.baseDps + (this.storm.maxDps - this.storm.baseDps) * raw;
+    return { progress: raw, radius, dps };
+  }
+
+  updateStorm(delta) {
+    if (!this.storm || this.finished) return;
+    const state = this.getStormState();
+    if (state.progress <= 0) return;
+    this.storm.timer -= delta;
+    if (this.storm.timer > 0) return;
+    this.storm.timer = this.storm.tick;
+    const targets = this.entities.filter((entity) => entity.alive && (entity.controlled || !this.isMultiplayer));
+    for (const entity of targets) {
+      const distance = Math.hypot(entity.x - this.storm.centerX, entity.y - this.storm.centerY);
+      if (distance <= state.radius + (entity.radius || 0)) continue;
+      this.damageStormEntity(entity, state.dps * this.storm.tick);
+    }
+  }
+
+  damageStormEntity(entity, amount) {
+    if (!entity.alive) return;
+    entity.hp = Math.max(0, entity.hp - Math.round(amount));
+    this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#8d7cff', life: 0.18, maxLife: 0.18, radius: 30 });
+    if (entity.hp <= 0) this.turnIntoGhost(entity);
+    if (entity.controlled && this.isMultiplayer) {
+      this.stateSendTimer = 0;
+      this.broadcastState(1);
+    }
+  }
+
   addUltimateHit(entity) {
     if (!['ain', 'jaejun', 'seojun'].includes(entity?.character?.id)) return;
     if (entity.ultimateReady) return;
@@ -757,7 +827,8 @@ export class GameScene {
   }
 
   performUltimate(owner, dirX, dirY, fromNetwork = false) {
-    if (!owner?.alive || this.isStunned(owner)) return;
+    if (!owner?.alive) return;
+    if (!fromNetwork && this.isStunned(owner)) return;
     if (!owner.ultimateReady && !fromNetwork) return;
     const length = Math.hypot(dirX, dirY) || 1;
     const nx = dirX / length;
@@ -906,9 +977,11 @@ export class GameScene {
 
   updateHud() {
     const alive = this.entities.filter((entity) => entity.alive).length;
+    const stormState = this.getStormState();
+    const stormLabel = stormState.progress <= 0 ? '자기장 대기' : '자기장 ' + Math.round(stormState.progress * 100) + '%';
     this.aliveCount.textContent = alive + '명 생존';
     const seconds = Math.floor((performance.now() - this.startedAt) / 1000);
-    this.gameTimer.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+    this.gameTimer.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0') + ' · ' + stormLabel;
     this.updateUltimatePad();
   }
 
@@ -968,6 +1041,7 @@ export class GameScene {
     ctx.save();
     ctx.scale(scale, scale);
     ctx.translate(-this.camera.x, -this.camera.y);
+    this.drawStorm(ctx);
     this.drawZones(ctx);
     this.drawAimLine(ctx);
     this.effects.forEach((effect) => this.drawEffect(ctx, effect));
@@ -975,7 +1049,6 @@ export class GameScene {
     this.entities.forEach((entity) => { if (this.canSeeEntity(entity)) this.drawEntity(ctx, entity); });
     ctx.restore();
     this.drawGhostOverlay(ctx);
-    this.drawMinimap(ctx);
   }
 
   getBushKey(entity) {
@@ -998,6 +1071,26 @@ export class GameScene {
     const playerBushKey = this.getBushKey(player);
     if (!playerBushKey) return false;
     return entityBushKey === playerBushKey;
+  }
+
+  drawStorm(ctx) {
+    if (!this.storm) return;
+    const state = this.getStormState();
+    if (state.progress <= 0) return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(77, 56, 180, 0.42)';
+    ctx.beginPath();
+    ctx.rect(0, 0, this.map.width, this.map.height);
+    ctx.arc(this.storm.centerX, this.storm.centerY, state.radius, 0, Math.PI * 2, true);
+    ctx.fill('evenodd');
+    ctx.strokeStyle = 'rgba(174, 235, 255, 0.92)';
+    ctx.lineWidth = 8;
+    ctx.shadowColor = '#91f7ff';
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.arc(this.storm.centerX, this.storm.centerY, state.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   drawZones(ctx) {
