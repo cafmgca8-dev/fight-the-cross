@@ -107,7 +107,7 @@ export class GameScene {
       damage: stats.basicDamage,
       speed: controlled ? 250 : 210,
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
-      alive: true, dirX: 0, dirY: -1, attackTimer: 0
+      alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0
     };
   }
 
@@ -257,11 +257,15 @@ export class GameScene {
       entity.alive = payload.alive;
       entity.dirX = payload.dirX;
       entity.dirY = payload.dirY;
+      if (typeof payload.ammo === 'number') entity.ammo = payload.ammo;
+      if (typeof payload.ammoReloadTimer === 'number') entity.ammoReloadTimer = payload.ammoReloadTimer;
     }));
 
     this.networkUnsubs.push(this.game.network.on('playerAttack', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
       if (!entity || entity.controlled) return;
+      entity.ammo = Math.max(0, entity.ammo - 1);
+      if (entity.ammo < entity.maxAmmo && entity.ammoReloadTimer <= 0) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
       this.performAttack(entity, payload.dirX, payload.dirY, true, true);
     }));
   }
@@ -280,7 +284,9 @@ export class GameScene {
       hp: player.hp,
       alive: player.alive,
       dirX: player.dirX,
-      dirY: player.dirY
+      dirY: player.dirY,
+      ammo: player.ammo,
+      ammoReloadTimer: player.ammoReloadTimer
     });
   }
 
@@ -459,6 +465,7 @@ export class GameScene {
     this.updatePlayer(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
+    this.updateAmmo(delta);
     this.updateProjectiles(delta);
     this.updateEffects(delta);
     this.updateCamera(delta);
@@ -499,7 +506,7 @@ export class GameScene {
       bot.attackTimer -= delta;
       if (distance < 430 && bot.attackTimer <= 0) {
         this.performAttack(bot, desiredX, desiredY, true);
-        bot.attackTimer = this.getAttackProfile(bot).cooldown + 0.35;
+        bot.attackTimer = 0.55;
       }
     }
   }
@@ -530,11 +537,11 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
-    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 1.05, range: 560, speed: 900, width: 4, color: '#f8fbff', damageScale: 1.0 };
-    if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.7, range: 520, speed: 780, width: 6, color: '#ff75c8', damageScale: 0.54 };
-    if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.82, range: 112, color: '#ffcc4d', damageScale: 0.95 };
-    if (id === 'jaejun') return { type: 'punch', cooldown: 0.62, range: 92, color: '#9fd2ff', damageScale: 0.72 };
-    return { type: 'punch', cooldown: 0.68, range: 96, color: '#36d6a5', damageScale: 1 };
+    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.45, range: 560, speed: 900, width: 4, color: '#f8fbff', damageScale: 1.0 };
+    if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.18, reloadTime: 1.15, range: 520, speed: 780, width: 6, color: '#ff75c8', damageScale: 0.54 };
+    if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.18, reloadTime: 1.05, range: 112, color: '#ffcc4d', damageScale: 0.95 };
+    if (id === 'jaejun') return { type: 'punch', cooldown: 0.18, reloadTime: 0.95, range: 92, color: '#9fd2ff', damageScale: 0.72 };
+    return { type: 'punch', cooldown: 0.18, reloadTime: 1.0, range: 96, color: '#36d6a5', damageScale: 1 };
   }
 
   autoAttackNearest() {
@@ -576,6 +583,11 @@ export class GameScene {
     owner.dirX = nx;
     owner.dirY = ny;
     const profile = this.getAttackProfile(owner);
+    if (!fromNetwork) {
+      if (owner.ammo <= 0) return;
+      owner.ammo -= 1;
+      if (owner.ammo < owner.maxAmmo && owner.ammoReloadTimer <= 0) owner.ammoReloadTimer = profile.reloadTime;
+    }
     if (owner.controlled) {
       this.attackCooldown = profile.cooldown;
       if (this.isMultiplayer && this.game.room?.code && !fromNetwork) {
@@ -636,6 +648,17 @@ export class GameScene {
     if (entity.controlled && this.isMultiplayer) {
       this.stateSendTimer = 0;
       this.broadcastState(1);
+    }
+  }
+
+  updateAmmo(delta) {
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.ammo >= entity.maxAmmo) continue;
+      entity.ammoReloadTimer -= delta;
+      if (entity.ammoReloadTimer <= 0) {
+        entity.ammo += 1;
+        if (entity.ammo < entity.maxAmmo) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
+      }
     }
   }
 
@@ -799,6 +822,23 @@ export class GameScene {
     const hpText = Math.ceil(entity.hp) + ' / ' + entity.maxHp;
     ctx.strokeText(hpText, entity.x, barY + barHeight / 2 + 0.5);
     ctx.fillText(hpText, entity.x, barY + barHeight / 2 + 0.5);
+
+    const ammoY = barY + barHeight + 5;
+    const ammoWidth = 22;
+    const ammoHeight = 7;
+    const ammoGap = 5;
+    const startX = entity.x - ((ammoWidth * 3 + ammoGap * 2) / 2);
+    for (let i = 0; i < 3; i += 1) {
+      ctx.fillStyle = 'rgba(0,0,0,.5)';
+      ctx.fillRect(startX + i * (ammoWidth + ammoGap), ammoY, ammoWidth, ammoHeight);
+      ctx.strokeStyle = 'rgba(255,255,255,.65)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(startX + i * (ammoWidth + ammoGap), ammoY, ammoWidth, ammoHeight);
+      if (i < entity.ammo) {
+        ctx.fillStyle = '#ff9f1a';
+        ctx.fillRect(startX + i * (ammoWidth + ammoGap) + 1.5, ammoY + 1.5, ammoWidth - 3, ammoHeight - 3);
+      }
+    }
     ctx.restore();
   }
 
