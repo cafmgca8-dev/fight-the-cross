@@ -103,7 +103,7 @@ export class GameScene {
   createEntity(id, name, character, spawn, controlled) {
     const stats = this.game.levelManager.applyLevel(character, controlled ? (this.game.save.characters[character.id]?.level || 1) : 1);
     return {
-      id, name, character, controlled, x: spawn.x, y: spawn.y, radius: 24,
+      id, name, character, controlled, x: spawn.x, y: spawn.y, radius: 18,
       hp: stats.hp, maxHp: stats.hp,
       damage: stats.basicDamage,
       speed: controlled ? 250 : 210,
@@ -538,11 +538,11 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
-    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.45, range: 390, speed: 850, width: 4, color: '#f8fbff', damageScale: 1.0 };
+    if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.55, range: 470, speed: 880, width: 4, color: '#f8fbff', damageScale: 1.0 };
     if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.18, reloadTime: 1.15, range: 520, speed: 780, width: 6, color: '#ff75c8', damageScale: 0.54 };
     if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.18, reloadTime: 1.05, range: 112, color: '#ffcc4d', damageScale: 0.95 };
-    if (id === 'jaejun') return { type: 'punch', cooldown: 0.18, reloadTime: 0.95, range: 92, color: '#9fd2ff', damageScale: 0.72 };
-    return { type: 'punch', cooldown: 0.18, reloadTime: 1.0, range: 96, color: '#36d6a5', damageScale: 1 };
+    if (id === 'jaejun') return { type: 'punch', cooldown: 0.18, reloadTime: 1.25, range: 92, color: '#9fd2ff', damageScale: 0.72 };
+    return { type: 'punch', cooldown: 0.18, reloadTime: 1.28, range: 96, color: '#36d6a5', damageScale: 1 };
   }
 
   autoAttackNearest() {
@@ -636,7 +636,7 @@ export class GameScene {
       vy: ny * profile.speed,
       radius: profile.width,
       damage: owner.damage * profile.damageScale,
-      life: profile.range / profile.speed,
+      life: Math.max(0.05, (profile.range - 34) / profile.speed),
       color: profile.color,
       type: profile.type
     });
