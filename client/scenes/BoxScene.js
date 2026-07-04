@@ -10,13 +10,14 @@ export class BoxScene {
     this.game.ui.render('<main class="screen box-screen">' +
       this.game.ui.statusBar(this.game.room, this.game.network.state) +
       '<div class="nav-row"><button class="btn secondary" data-scene="main">홈</button><button class="btn secondary" data-scene="characters">캐릭터</button></div>' +
-      '<section class="panel box-panel"><h2>상자</h2>' +
+      '<section class="panel box-panel">' +
+      '<div class="box-title-row"><div><span class="box-eyebrow">REWARD BOX</span><h2>상자</h2></div><strong class="box-count-pill">' + this.game.save.boxes + '개</strong></div>' +
       '<div class="stat-list">' +
       '<div class="stat"><span>보유 상자</span><strong id="boxCount">' + this.game.save.boxes + '</strong></div>' +
       '<div class="stat"><span>승리 수</span><strong>' + this.game.save.wins + '</strong></div>' +
       '<div class="stat"><span>코인</span><strong id="coinCount">' + this.game.save.coins + '</strong></div>' +
       '</div>' +
-      '<div class="box-preview"><img src="/assets/ui/box-closed.png" alt="상자"></div>' +
+      '<div class="box-preview"><div class="box-preview-aura"></div><img src="/assets/ui/box-closed.png" alt="상자"></div>' +
       '<div class="button-grid"><button id="claimVictory" class="btn">승리 보상 테스트</button><button id="openBox" class="btn warning">상자 열기</button></div>' +
       '</section>' +
       '<section class="message-log">' + this.game.message + '</section>' +
