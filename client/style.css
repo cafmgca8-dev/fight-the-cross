@@ -1254,6 +1254,7 @@ body:not(.viewport-activated) #app {
 
 .box-screen {
   min-height: calc(100dvh - 28px);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
 .box-panel {
@@ -1278,6 +1279,12 @@ body:not(.viewport-activated) #app {
   max-height: 290px;
   object-fit: contain;
   filter: drop-shadow(0 20px 30px rgba(0,0,0,.42));
+}
+
+.box-screen .message-log {
+  min-height: 48px;
+  max-height: 72px;
+  overflow: hidden;
 }
 
 .box-reveal-overlay {
@@ -1431,5 +1438,160 @@ body:not(.viewport-activated) #app {
   .box-reward-text {
     margin-top: 0;
     align-self: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell:has(.box-screen) {
+    min-height: 100dvh;
+    padding: max(6px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
+
+  .box-screen {
+    width: 100%;
+    height: calc(100dvh - max(6px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+    min-height: 0;
+    gap: 6px;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+
+  .box-screen .status-bar {
+    position: relative;
+    top: auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    border-radius: 7px;
+  }
+
+  .box-screen .status-item {
+    min-height: 34px;
+    padding: 4px 5px;
+    gap: 0;
+  }
+
+  .box-screen .status-label {
+    font-size: 9px;
+  }
+
+  .box-screen .status-value {
+    font-size: 11px;
+  }
+
+  .box-screen .nav-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .box-screen .nav-row .btn,
+  .box-screen .button-grid .btn {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .box-panel {
+    min-height: 0;
+    gap: 7px;
+    padding: 9px;
+    overflow: hidden;
+  }
+
+  .box-panel h2 {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .box-panel .stat-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    margin: 0;
+  }
+
+  .box-panel .stat {
+    min-height: 38px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 1px;
+    padding: 4px;
+    border-radius: 7px;
+    background: rgba(255,255,255,.06);
+    text-align: center;
+    font-size: 11px;
+  }
+
+  .box-panel .stat strong {
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .box-preview {
+    min-height: 0;
+    height: clamp(112px, 26dvh, 180px);
+  }
+
+  .box-preview img {
+    width: min(310px, 74vw);
+    max-height: clamp(108px, 25dvh, 172px);
+  }
+
+  .box-panel .button-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .box-screen .message-log {
+    min-height: 34px;
+    max-height: 42px;
+    padding: 7px 9px;
+    font-size: 12px;
+    line-height: 1.25;
+    overflow: hidden;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .app-shell:has(.box-screen) {
+    padding: max(4px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom));
+  }
+
+  .box-screen {
+    height: calc(100dvh - max(4px, env(safe-area-inset-top)) - max(4px, env(safe-area-inset-bottom)));
+    grid-template-columns: minmax(0, 1fr) minmax(210px, .42fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+
+  .box-screen .status-bar {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .box-screen .nav-row {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .box-panel {
+    grid-column: 1;
+    grid-row: 2 / 4;
+  }
+
+  .box-preview {
+    height: clamp(94px, 34dvh, 160px);
+  }
+
+  .box-preview img {
+    max-height: clamp(90px, 33dvh, 154px);
+  }
+
+  .box-screen .message-log {
+    grid-column: 2;
+    grid-row: 3;
   }
 }
