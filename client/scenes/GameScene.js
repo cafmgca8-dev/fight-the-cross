@@ -23,6 +23,7 @@ export class GameScene {
     this.isMultiplayer = false;
     this.camera = { x: 0, y: 0, width: 980, height: 552 };
     this.characterSprites = {};
+    this.processedCharacterSprites = {};
     this.storm = null;
   }
 
@@ -65,7 +66,7 @@ export class GameScene {
       this.loadImage('/assets/characters/jaejun-reference.png').catch(() => null)
     ]).then(([image, maskImage, jaejunSprite]) => {
       this.mapImage = image;
-      if (jaejunSprite) this.characterSprites.jaejun = jaejunSprite;
+      if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -1203,19 +1204,21 @@ export class GameScene {
       ctx.lineWidth = entity.controlled ? 5 : 3;
       ctx.stroke();
     }
+    const spriteMetrics = this.getCharacterSpriteMetrics(entity);
+    const labelY = spriteMetrics ? entity.y - spriteMetrics.height - 30 : entity.y - 44;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '800 15px system-ui';
     ctx.lineWidth = 4;
     ctx.strokeStyle = 'rgba(255,255,255,.82)';
-    ctx.strokeText(entity.name, entity.x, entity.y - 44);
+    ctx.strokeText(entity.name, entity.x, labelY);
     ctx.fillStyle = '#111318';
-    ctx.fillText(entity.name, entity.x, entity.y - 44);
+    ctx.fillText(entity.name, entity.x, labelY);
 
     const barWidth = 82;
     const barHeight = 14;
     const barX = entity.x - barWidth / 2;
-    const barY = entity.y - 31;
+    const barY = spriteMetrics ? entity.y - spriteMetrics.height - 17 : entity.y - 31;
     const hpRatio = Math.max(0, entity.hp / entity.maxHp);
     ctx.fillStyle = 'rgba(0,0,0,.58)';
     ctx.fillRect(barX, barY, barWidth, barHeight);
@@ -1274,18 +1277,63 @@ export class GameScene {
     ctx.restore();
   }
 
+  setupCharacterSprite(id, image) {
+    this.characterSprites[id] = image;
+    if (id !== 'jaejun') return;
+    const crops = {
+      front: { x: 65, y: 382, width: 315, height: 505 },
+      left: { x: 465, y: 392, width: 245, height: 498 },
+      right: { x: 805, y: 392, width: 260, height: 498 },
+      back: { x: 1160, y: 392, width: 280, height: 498 }
+    };
+    this.processedCharacterSprites.jaejun = Object.fromEntries(
+      Object.entries(crops).map(([direction, crop]) => [direction, this.createTransparentSprite(image, crop)])
+    );
+  }
+
+  createTransparentSprite(image, crop) {
+    const canvas = document.createElement('canvas');
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+    const data = ctx.getImageData(0, 0, crop.width, crop.height);
+    for (let i = 0; i < data.data.length; i += 4) {
+      const r = data.data[i];
+      const g = data.data[i + 1];
+      const b = data.data[i + 2];
+      if (r > 235 && g > 235 && b > 235) data.data[i + 3] = 0;
+    }
+    ctx.putImageData(data, 0, 0);
+    return canvas;
+  }
+
+  getCharacterDirection(entity) {
+    const dx = entity.dirX || 0;
+    const dy = entity.dirY || 0;
+    if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? 'left' : 'right';
+    return dy < 0 ? 'back' : 'front';
+  }
+
+  getCharacterSpriteMetrics(entity) {
+    if (entity.character?.id !== 'jaejun' || !this.processedCharacterSprites?.jaejun) return null;
+    return { width: 58, height: 82 };
+  }
+
   drawCharacterSprite(ctx, entity) {
-    const sprite = this.characterSprites?.[entity.character?.id];
+    const spriteSet = this.processedCharacterSprites?.[entity.character?.id];
+    if (!spriteSet) return false;
+    const direction = this.getCharacterDirection(entity);
+    const sprite = spriteSet[direction] || spriteSet.front;
     if (!sprite) return false;
-    const crop = entity.character.id === 'jaejun'
-      ? { x: 65, y: 380, width: 310, height: 510 }
-      : { x: 0, y: 0, width: sprite.width, height: sprite.height };
     const width = 58;
     const height = 82;
+    const moving = Math.hypot(this.touchVector?.x || 0, this.touchVector?.y || 0) > 0.08 || Math.hypot(entity.dirX || 0, entity.dirY || 0) > 0.08;
+    const bob = moving ? Math.sin(performance.now() / 115) * 2 : 0;
     ctx.save();
     ctx.shadowBlur = 18;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.38)';
-    ctx.drawImage(sprite, crop.x, crop.y, crop.width, crop.height, entity.x - width / 2, entity.y - height + 24, width, height);
+    ctx.drawImage(sprite, entity.x - width / 2, entity.y - height + 24 + bob, width, height);
     ctx.shadowBlur = 0;
     ctx.strokeStyle = entity.controlled ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.65)';
     ctx.lineWidth = entity.controlled ? 4 : 2;
