@@ -1491,14 +1491,44 @@ export class GameScene {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
     const data = ctx.getImageData(0, 0, crop.width, crop.height);
+    const isBackground = (index) => {
+      const r = data.data[index];
+      const g = data.data[index + 1];
+      const b = data.data[index + 2];
+      const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 36;
+      return neutral && r > 188 && g > 188 && b > 188;
+    };
+    const seen = new Uint8Array(crop.width * crop.height);
+    const queue = [];
+    const push = (x, y) => {
+      if (x < 0 || y < 0 || x >= crop.width || y >= crop.height) return;
+      const key = y * crop.width + x;
+      if (seen[key]) return;
+      const index = key * 4;
+      if (!isBackground(index)) return;
+      seen[key] = 1;
+      queue.push([x, y]);
+    };
+    for (let x = 0; x < crop.width; x += 1) {
+      push(x, 0);
+      push(x, crop.height - 1);
+    }
+    for (let y = 0; y < crop.height; y += 1) {
+      push(0, y);
+      push(crop.width - 1, y);
+    }
+    while (queue.length) {
+      const [x, y] = queue.shift();
+      const key = y * crop.width + x;
+      data.data[key * 4 + 3] = 0;
+      push(x + 1, y);
+      push(x - 1, y);
+      push(x, y + 1);
+      push(x, y - 1);
+    }
     let visiblePixels = 0;
     for (let i = 0; i < data.data.length; i += 4) {
-      const r = data.data[i];
-      const g = data.data[i + 1];
-      const b = data.data[i + 2];
-      const brightNeutral = r > 222 && g > 222 && b > 222 && Math.max(r, g, b) - Math.min(r, g, b) < 22;
-      if (brightNeutral) data.data[i + 3] = 0;
-      else visiblePixels += 1;
+      if (data.data[i + 3] > 0) visiblePixels += 1;
     }
     if (visiblePixels < 900) return null;
     ctx.putImageData(data, 0, 0);
@@ -1723,5 +1753,4 @@ export class GameScene {
     this.networkUnsubs = [];
   }
 }
-
 
