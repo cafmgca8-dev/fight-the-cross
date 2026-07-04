@@ -80,9 +80,10 @@ export class BoxScene {
   }
 
   renderReward(overlay, reward) {
-    const showReward = () => {
+    window.setTimeout(() => {
       const rewardNode = document.createElement('div');
       rewardNode.className = 'box-reward-text';
+
       if (reward?.type === 'coins') {
         const image = overlay.querySelector('.box-reveal-image');
         if (image) {
@@ -90,47 +91,58 @@ export class BoxScene {
           image.alt = '골드 보상';
         }
         rewardNode.innerHTML = '<span>골드 획득</span><strong>+' + reward.amount + '</strong><small>화면을 누르면 돌아갑니다</small>';
-      } else if (reward?.type === 'character') {
-        this.showCharacterUnlockVideo(overlay);
-        rewardNode.innerHTML = '<span>신규 캐릭터 획득</span><strong>' + reward.name + '</strong><small>화면을 누르면 돌아갑니다</small>';
-      } else {
-        rewardNode.innerHTML = '<span>보상 획득</span><strong>완료</strong><small>화면을 누르면 돌아갑니다</small>';
+        overlay.querySelector('.box-reveal-stage')?.appendChild(rewardNode);
+        this.enableCloseOnTap(overlay);
+        return;
       }
-      overlay.querySelector('.box-reveal-stage')?.appendChild(rewardNode);
-      overlay.addEventListener('click', () => {
-        this.closeRevealOverlay();
-        this.game.refresh();
-      }, { once: true });
-    };
 
-    window.setTimeout(showReward, reward?.type === 'coins' ? 620 : 300);
+      if (reward?.type === 'character') {
+        rewardNode.innerHTML = '<span>신규 캐릭터 획득</span><strong>' + reward.name + '</strong><small>화면을 누르면 돌아갑니다</small>';
+        overlay.querySelector('.box-reveal-stage')?.appendChild(rewardNode);
+        this.showCharacterRewardVisual(overlay, reward, () => this.enableCloseOnTap(overlay));
+        return;
+      }
+
+      rewardNode.innerHTML = '<span>보상 획득</span><strong>완료</strong><small>화면을 누르면 돌아갑니다</small>';
+      overlay.querySelector('.box-reveal-stage')?.appendChild(rewardNode);
+      this.enableCloseOnTap(overlay);
+    }, reward?.type === 'coins' ? 620 : 300);
   }
 
-  showCharacterRewardVisual(overlay, reward) {
-    if (reward?.characterId === 'kiseong') {
-      this.showCharacterRewardImage(overlay, '/assets/ui/reward-kiseong.png', '?? ??');
-      return;
-    }
-    if (reward?.characterId === 'hyoseong') {
-      this.showCharacterRewardImage(overlay, '/assets/ui/reward-hyoseong.png', '?? ??');
-      return;
-    }
-    this.showCharacterUnlockVideo(overlay);
+  showCharacterRewardVisual(overlay, reward, onReadyToClose) {
+    const specialImage = this.getCharacterRewardImage(reward?.characterId);
+    this.showCharacterUnlockVideo(overlay, () => {
+      if (specialImage) {
+        this.showCharacterRewardImage(overlay, specialImage.src, specialImage.alt);
+      }
+      onReadyToClose?.();
+    });
+  }
+
+  getCharacterRewardImage(characterId) {
+    if (characterId === 'kiseong') return { src: '/assets/ui/reward-kiseong.png', alt: '기성 획득' };
+    if (characterId === 'hyoseong') return { src: '/assets/ui/reward-hyoseong.png', alt: '효성 획득' };
+    return null;
   }
 
   showCharacterRewardImage(overlay, src, alt) {
-    overlay.classList.add('is-character-reward');
-    const image = overlay.querySelector('.box-reveal-image');
-    if (!image) return;
+    const visual = overlay.querySelector('.box-reveal-video, .box-reveal-image, .box-reveal-character-image');
+    if (!visual) return;
+    const image = document.createElement('img');
     image.className = 'box-reveal-character-image';
     image.src = src;
     image.alt = alt;
+    visual.replaceWith(image);
   }
 
-  showCharacterUnlockVideo(overlay) {
+  showCharacterUnlockVideo(overlay, onEnded) {
     overlay.classList.add('is-character-reward');
     const image = overlay.querySelector('.box-reveal-image');
-    if (!image) return;
+    if (!image) {
+      onEnded?.();
+      return;
+    }
+
     const video = document.createElement('video');
     video.className = 'box-reveal-video';
     video.src = '/assets/ui/character-unlock.mp4';
@@ -139,7 +151,25 @@ export class BoxScene {
     video.preload = 'auto';
     video.setAttribute('playsinline', '');
     image.replaceWith(video);
-    video.play().catch(() => {});
+
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      onEnded?.();
+    };
+    video.addEventListener('ended', finish, { once: true });
+    window.setTimeout(finish, 3400);
+    video.play().catch(() => window.setTimeout(finish, 900));
+  }
+
+  enableCloseOnTap(overlay) {
+    window.setTimeout(() => {
+      overlay.addEventListener('click', () => {
+        this.closeRevealOverlay();
+        this.game.refresh();
+      }, { once: true });
+    }, 180);
   }
 
   updateCounters() {
