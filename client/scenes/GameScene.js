@@ -764,7 +764,7 @@ export class GameScene {
     const maxVolume = options.maxVolume ?? 0.62;
     const minVolume = options.minVolume ?? 0.16;
     const volume = owner.controlled ? selfVolume : Math.max(minVolume, maxVolume * (1 - distance / audibleRange));
-    this.game.audio.playEffect(src, { volume });
+    return this.game.audio.playEffect(src, { volume });
   }
 
   meleeAttack(owner, nx, ny, profile) {
@@ -1025,9 +1025,15 @@ export class GameScene {
   }
 
   castCowboyUltimate(owner) {
-    this.playAttackProximitySound(owner, ['jaejun_cowboy'], '/assets/audio/cowboy-ultimate-standoff.mp3', { selfVolume: 0.82, maxVolume: 0.72, minVolume: 0.18, range: 720 });
+    const standoffSound = this.playAttackProximitySound(owner, ['jaejun_cowboy'], '/assets/audio/cowboy-ultimate-standoff.mp3', { selfVolume: 0.82, maxVolume: 0.72, minVolume: 0.18, range: 720 });
     const radius = 92;
     const delay = 3000;
+    if (standoffSound) {
+      window.setTimeout(() => {
+        standoffSound.pause();
+        standoffSound.currentTime = 0;
+      }, delay);
+    }
     const originId = owner.id;
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffd66b', life: delay / 1000, maxLife: delay / 1000, radius });
     window.setTimeout(() => {

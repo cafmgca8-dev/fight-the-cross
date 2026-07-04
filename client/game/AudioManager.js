@@ -27,12 +27,13 @@ export class AudioManager {
   }
 
   playEffect(src, options = {}) {
-    if (!this.enabled) return;
+    if (!this.enabled) return null;
     const config = { volume: 0.72, ...options };
     const sound = new Audio(src);
     sound.volume = config.volume;
     const promise = sound.play();
     if (promise?.catch) promise.catch(() => {});
+    return sound;
   }
 
   playMusic(src, options = {}) {
