@@ -67,14 +67,16 @@ export class GameScene {
       this.loadImage('/assets/characters/ain-reference.png').catch(() => null),
       this.loadImage('/assets/characters/seojun-reference.png').catch(() => null),
       this.loadImage('/assets/characters/kiseong-reference.png').catch(() => null),
-      this.loadImage('/assets/characters/hyoseong-reference.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite]) => {
+      this.loadImage('/assets/characters/hyoseong-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-cowboy-reference.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite]) => {
       this.mapImage = image;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
       if (seojunSprite) this.setupCharacterSprite('seojun', seojunSprite);
       if (kiseongSprite) this.setupCharacterSprite('kiseong', kiseongSprite);
       if (hyoseongSprite) this.setupCharacterSprite('hyoseong', hyoseongSprite);
+      if (jaejunCowboySprite) this.setupCharacterSprite('jaejun_cowboy', jaejunCowboySprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -1452,6 +1454,12 @@ export class GameScene {
         left: { x: 438, y: 410, width: 300, height: 485 },
         right: { x: 790, y: 410, width: 310, height: 485 },
         back: { x: 1160, y: 410, width: 315, height: 485 }
+      },
+      jaejun_cowboy: {
+        front: { x: 45, y: 395, width: 360, height: 505 },
+        left: { x: 440, y: 395, width: 315, height: 505 },
+        right: { x: 790, y: 395, width: 330, height: 505 },
+        back: { x: 1138, y: 395, width: 355, height: 505 }
       }
     };
     const crops = spriteCrops[id];
@@ -1474,7 +1482,8 @@ export class GameScene {
       const r = data.data[i];
       const g = data.data[i + 1];
       const b = data.data[i + 2];
-      if (r > 235 && g > 235 && b > 235) data.data[i + 3] = 0;
+      const brightNeutral = r > 222 && g > 222 && b > 222 && Math.max(r, g, b) - Math.min(r, g, b) < 22;
+      if (brightNeutral) data.data[i + 3] = 0;
       else visiblePixels += 1;
     }
     if (visiblePixels < 900) return null;
