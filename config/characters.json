@@ -134,5 +134,35 @@
         }
       ]
     }
+  },
+  {
+    "id": "jaejun_cowboy",
+    "name": "재준-카우보이",
+    "rarity": "Legendary",
+    "hp": 4400,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "권총 세 발",
+      "damage": 700,
+      "effects": [
+        {
+          "type": "tripleShot",
+          "shots": 3,
+          "range": 430
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "결투의 예고",
+      "description": "3초 후 자신 근처의 모든 적에게 총을 쏴 10000 피해를 줍니다.",
+      "damage": 10000,
+      "effects": [
+        {
+          "type": "delayedAreaShot",
+          "delayMs": 3000,
+          "radius": 260
+        }
+      ]
+    }
   }
 ]

@@ -8,19 +8,25 @@
           "type": "coins",
           "amountMin": 50,
           "amountMax": 180,
-          "weight": 50
+          "weight": 45
         },
         {
           "type": "character",
           "rarity": "Basic",
           "onlyLocked": true,
-          "weight": 30
+          "weight": 25
         },
         {
           "type": "character",
           "rarity": "Rare",
           "onlyLocked": true,
           "weight": 20
+        },
+        {
+          "type": "character",
+          "rarity": "Legendary",
+          "onlyLocked": true,
+          "weight": 10
         }
       ]
     }

@@ -646,6 +646,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
+    if (id === 'jaejun_cowboy') return { type: 'pistolBurst', cooldown: 0.18, reloadTime: 1.45, range: 430, speed: 900, width: 5, hitRadius: 15, spread: 0.13, color: '#ffd66b', damageScale: 1.0 };
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'hyoseong') return { type: 'thrust', cooldown: 0.18, reloadTime: 1.3, range: 210, width: 28, color: '#75d8ff', damageScale: 1.0 };
     if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 980, width: 4, hitRadius: 14, color: '#f8fbff', damageScale: 1.0 };
@@ -716,6 +717,20 @@ export class GameScene {
       this.fireProjectile(owner, nx, ny, profile, sideX, sideY);
       this.fireProjectile(owner, nx, ny, profile, -sideX, -sideY);
       this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.12, maxLife: 0.12, radius: 20 });
+      return;
+    }
+
+    if (profile.type === 'pistolBurst') {
+      this.playAttackProximitySound(owner, ['jaejun_cowboy'], '/assets/audio/sniper-fire.wav', { selfVolume: 0.68, maxVolume: 0.58, minVolume: 0.15, range: 680 });
+      const baseAngle = Math.atan2(ny, nx);
+      [-profile.spread, 0, profile.spread].forEach((offset, index) => {
+        const angle = baseAngle + offset;
+        const shotX = Math.cos(angle);
+        const shotY = Math.sin(angle);
+        const side = index - 1;
+        this.fireProjectile(owner, shotX, shotY, profile, -ny * side * 7, nx * side * 7);
+      });
+      this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.16, maxLife: 0.16, radius: 24 });
       return;
     }
 
@@ -918,7 +933,7 @@ export class GameScene {
   }
 
   addUltimateHit(entity) {
-    if (!['ain', 'jaejun', 'seojun', 'kiseong', 'hyoseong'].includes(entity?.character?.id)) return;
+    if (!['ain', 'jaejun', 'seojun', 'kiseong', 'hyoseong', 'jaejun_cowboy'].includes(entity?.character?.id)) return;
     if (entity.ultimateReady) return;
     entity.ultimateHits = Math.min(3, (entity.ultimateHits || 0) + 1);
     if (entity.ultimateHits >= 3) entity.ultimateReady = true;
@@ -947,6 +962,7 @@ export class GameScene {
     else if (id === 'seojun') this.castSeojunUltimate(owner, nx, ny);
     else if (id === 'kiseong') this.castKiseongUltimate(owner);
     else if (id === 'hyoseong') this.castHyoseongUltimate(owner);
+    else if (id === 'jaejun_cowboy') this.castCowboyUltimate(owner);
   }
 
   castAinUltimate(owner) {
@@ -990,6 +1006,27 @@ export class GameScene {
       this.effects.push({ type: 'slow', x: entity.x, y: entity.y, color: '#75d8ff', life: 0.65, maxLife: 0.65, radius: 28, slow });
     }
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#75d8ff', life: 0.75, maxLife: 0.75, radius: 180 });
+  }
+
+  castCowboyUltimate(owner) {
+    const radius = 260;
+    const delay = 3000;
+    const originId = owner.id;
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffd66b', life: delay / 1000, maxLife: delay / 1000, radius });
+    window.setTimeout(() => {
+      if (this.finished) return;
+      const caster = this.entities.find((entity) => entity.id === originId);
+      if (!caster?.alive) return;
+      this.effects.push({ type: 'ultimate-ring', x: caster.x, y: caster.y, color: '#ffef9a', life: 0.36, maxLife: 0.36, radius });
+      for (const entity of this.entities) {
+        if (!entity.alive || entity.id === caster.id) continue;
+        if (Math.hypot(entity.x - caster.x, entity.y - caster.y) <= radius + (entity.hitRadius || entity.radius)) {
+          this.effects.push({ type: 'line', x: caster.x, y: caster.y, dx: (entity.x - caster.x) / (Math.hypot(entity.x - caster.x, entity.y - caster.y) || 1), dy: (entity.y - caster.y) / (Math.hypot(entity.x - caster.x, entity.y - caster.y) || 1), color: '#ffd66b', life: 0.18, maxLife: 0.18, range: Math.hypot(entity.x - caster.x, entity.y - caster.y) });
+          this.damageEntity(entity, 10000, caster);
+        }
+      }
+      if (caster.controlled) this.game.audio.playEffect('/assets/audio/sniper-fire.wav', { volume: 0.86 });
+    }, delay);
   }
 
   castSeojunUltimate(owner, nx, ny) {
