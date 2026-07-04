@@ -1251,3 +1251,160 @@ body:not(.viewport-activated) #app {
     bottom: calc(max(18px, env(safe-area-inset-bottom)) + 104px);
   }
 }
+
+.box-screen {
+  min-height: calc(100dvh - 28px);
+}
+
+.box-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.box-preview {
+  min-height: clamp(180px, 28vw, 300px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 204, 77, .24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 204, 77, .24), transparent 42%),
+    linear-gradient(180deg, rgba(17, 19, 24, .74), rgba(8, 9, 13, .9));
+}
+
+.box-preview img {
+  width: min(440px, 78vw);
+  max-height: 290px;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 30px rgba(0,0,0,.42));
+}
+
+.box-reveal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 214, 86, .28), transparent 38%),
+    linear-gradient(180deg, rgba(15, 16, 14, .84), rgba(5, 6, 7, .95));
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.box-reveal-stage {
+  width: min(960px, 100%);
+  height: min(680px, 100dvh - 36px);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: center;
+  gap: 8px;
+}
+
+.box-reveal-image {
+  width: min(760px, 92vw);
+  max-height: min(70dvh, 520px);
+  object-fit: contain;
+  filter: drop-shadow(0 28px 42px rgba(0,0,0,.54));
+  transform-origin: 50% 72%;
+}
+
+.box-reveal-overlay.is-ready .box-reveal-image {
+  animation: boxIdle 1.8s ease-in-out infinite;
+}
+
+.box-reveal-overlay.is-shaking .box-reveal-image {
+  animation: boxShake .12s linear infinite;
+}
+
+.box-reveal-overlay.is-open {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 229, 70, .58), transparent 34%),
+    radial-gradient(circle at 50% 50%, rgba(255, 158, 29, .22), transparent 48%),
+    linear-gradient(180deg, rgba(36, 31, 11, .9), rgba(7, 6, 3, .96));
+}
+
+.box-reveal-overlay.is-open .box-reveal-image {
+  animation: rewardPop .42s cubic-bezier(.18, 1.35, .32, 1) both;
+}
+
+.box-reveal-hint {
+  min-height: 42px;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 229, 134, .36);
+  border-radius: 999px;
+  background: rgba(18, 13, 8, .52);
+  color: #fff6cf;
+  font-weight: 950;
+  text-shadow: 0 2px 8px rgba(0,0,0,.6);
+}
+
+.box-reward-text {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin-top: -4px;
+  color: #fff6d1;
+  text-align: center;
+  text-shadow: 0 4px 14px rgba(0,0,0,.72);
+  animation: rewardTextPop .38s ease-out both;
+}
+
+.box-reward-text span {
+  font-size: clamp(20px, 3vw, 34px);
+  font-weight: 950;
+}
+
+.box-reward-text strong {
+  color: #ffd447;
+  font-size: clamp(48px, 10vw, 112px);
+  line-height: .95;
+  -webkit-text-stroke: 2px rgba(85, 45, 0, .62);
+}
+
+.box-reward-text small {
+  color: rgba(255,255,255,.72);
+  font-size: clamp(13px, 1.8vw, 18px);
+  font-weight: 800;
+}
+
+@keyframes boxIdle {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.015); }
+}
+
+@keyframes boxShake {
+  0% { transform: translateX(-12px) rotate(-2.5deg) scale(1.02); }
+  50% { transform: translateX(12px) rotate(2.5deg) scale(1.02); }
+  100% { transform: translateX(-12px) rotate(-2.5deg) scale(1.02); }
+}
+
+@keyframes rewardPop {
+  from { opacity: .2; transform: scale(.82) translateY(18px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes rewardTextPop {
+  from { opacity: 0; transform: translateY(24px) scale(.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .box-reveal-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, .58fr);
+    grid-template-rows: 1fr;
+    gap: 10px;
+  }
+
+  .box-reveal-image {
+    max-height: calc(100dvh - 28px);
+  }
+
+  .box-reward-text {
+    margin-top: 0;
+    align-self: center;
+  }
+}
