@@ -64,11 +64,13 @@ export class GameScene {
       this.loadImage(map.image),
       map.collisionMask ? this.loadImage(map.collisionMask) : Promise.resolve(null),
       this.loadImage('/assets/characters/jaejun-reference.png').catch(() => null),
-      this.loadImage('/assets/characters/ain-reference.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite]) => {
+      this.loadImage('/assets/characters/ain-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-reference.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite]) => {
       this.mapImage = image;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
+      if (seojunSprite) this.setupCharacterSprite('seojun', seojunSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -1293,6 +1295,12 @@ export class GameScene {
         left: { x: 462, y: 405, width: 260, height: 482 },
         right: { x: 804, y: 405, width: 265, height: 482 },
         back: { x: 1164, y: 405, width: 300, height: 482 }
+      },
+      seojun: {
+        front: { x: 62, y: 405, width: 320, height: 482 },
+        left: { x: 455, y: 405, width: 268, height: 482 },
+        right: { x: 804, y: 405, width: 268, height: 482 },
+        back: { x: 1164, y: 405, width: 305, height: 482 }
       }
     };
     const crops = spriteCrops[id];
