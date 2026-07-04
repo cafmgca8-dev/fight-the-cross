@@ -22,6 +22,7 @@ export class GameScene {
     this.networkUnsubs = [];
     this.isMultiplayer = false;
     this.camera = { x: 0, y: 0, width: 980, height: 552 };
+    this.characterSprites = {};
     this.storm = null;
   }
 
@@ -60,9 +61,11 @@ export class GameScene {
     this.tryLandscapeFullscreen();
     Promise.all([
       this.loadImage(map.image),
-      map.collisionMask ? this.loadImage(map.collisionMask) : Promise.resolve(null)
-    ]).then(([image, maskImage]) => {
+      map.collisionMask ? this.loadImage(map.collisionMask) : Promise.resolve(null),
+      this.loadImage('/assets/characters/jaejun-reference.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite]) => {
       this.mapImage = image;
+      if (jaejunSprite) this.characterSprites.jaejun = jaejunSprite;
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -1190,14 +1193,16 @@ export class GameScene {
     ctx.save();
     ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
     ctx.shadowBlur = 16;
-    ctx.fillStyle = entity.color;
-    ctx.beginPath();
-    ctx.arc(entity.x, entity.y, entity.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = entity.controlled ? 5 : 3;
-    ctx.stroke();
+    if (!this.drawCharacterSprite(ctx, entity)) {
+      ctx.fillStyle = entity.color;
+      ctx.beginPath();
+      ctx.arc(entity.x, entity.y, entity.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = entity.controlled ? 5 : 3;
+      ctx.stroke();
+    }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '800 15px system-ui';
@@ -1267,6 +1272,28 @@ export class GameScene {
       }
     }
     ctx.restore();
+  }
+
+  drawCharacterSprite(ctx, entity) {
+    const sprite = this.characterSprites?.[entity.character?.id];
+    if (!sprite) return false;
+    const crop = entity.character.id === 'jaejun'
+      ? { x: 65, y: 380, width: 310, height: 510 }
+      : { x: 0, y: 0, width: sprite.width, height: sprite.height };
+    const width = 58;
+    const height = 82;
+    ctx.save();
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.38)';
+    ctx.drawImage(sprite, crop.x, crop.y, crop.width, crop.height, entity.x - width / 2, entity.y - height + 24, width, height);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = entity.controlled ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.65)';
+    ctx.lineWidth = entity.controlled ? 4 : 2;
+    ctx.beginPath();
+    ctx.ellipse(entity.x, entity.y + 19, 18, 7, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    return true;
   }
 
   drawGhostEntity(ctx, entity) {
