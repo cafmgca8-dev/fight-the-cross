@@ -760,7 +760,7 @@ export class GameScene {
 
   damageEntity(entity, amount, source = null) {
     if (!entity.alive) return;
-    if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) {
+    if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0) && !this.isInStorm(entity)) {
       entity.hp = entity.maxHp;
       return;
     }
@@ -802,11 +802,18 @@ export class GameScene {
     return { progress: raw, radius, dps };
   }
 
+  isInStorm(entity) {
+    if (!this.storm || !entity) return false;
+    const state = this.getStormState();
+    if (state.progress <= 0) return false;
+    return Math.hypot(entity.x - this.storm.centerX, entity.y - this.storm.centerY) > state.radius + (entity.radius || 0);
+  }
+
   updateSpecialZones(delta) {
     if (this.finished) return;
     const targets = this.entities.filter((entity) => entity.alive && (entity.controlled || !this.isMultiplayer));
     for (const entity of targets) {
-      if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) {
+      if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0) && !this.isInStorm(entity)) {
         if (entity.hp < entity.maxHp) entity.hp = entity.maxHp;
         continue;
       }
@@ -817,7 +824,7 @@ export class GameScene {
     if (this.environmentTimer > 0) return;
     this.environmentTimer = 0.65;
     for (const entity of targets) {
-      if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) continue;
+      if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0) && !this.isInStorm(entity)) continue;
       if (!this.isSnowAt(entity.x, entity.y, entity.radius || 0)) continue;
       this.damageHazardEntity(entity, (this.map.snowDps || 130) * this.environmentTimer, '#e9f8ff');
     }
@@ -825,7 +832,7 @@ export class GameScene {
 
   damageHazardEntity(entity, amount, color = '#8d7cff') {
     if (!entity.alive) return;
-    if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0)) {
+    if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0) && !this.isInStorm(entity)) {
       entity.hp = entity.maxHp;
       return;
     }
