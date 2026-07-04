@@ -1025,7 +1025,8 @@ export class GameScene {
   }
 
   castCowboyUltimate(owner) {
-    const radius = 260;
+    this.playAttackProximitySound(owner, ['jaejun_cowboy'], '/assets/audio/cowboy-ultimate-standoff.mp3', { selfVolume: 0.82, maxVolume: 0.72, minVolume: 0.18, range: 720 });
+    const radius = 92;
     const delay = 3000;
     const originId = owner.id;
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffd66b', life: delay / 1000, maxLife: delay / 1000, radius });
@@ -1034,14 +1035,20 @@ export class GameScene {
       const caster = this.entities.find((entity) => entity.id === originId);
       if (!caster?.alive) return;
       this.effects.push({ type: 'ultimate-ring', x: caster.x, y: caster.y, color: '#ffef9a', life: 0.36, maxLife: 0.36, radius });
-      for (const entity of this.entities) {
-        if (!entity.alive || entity.id === caster.id) continue;
-        if (Math.hypot(entity.x - caster.x, entity.y - caster.y) <= radius + (entity.hitRadius || entity.radius)) {
-          this.effects.push({ type: 'line', x: caster.x, y: caster.y, dx: (entity.x - caster.x) / (Math.hypot(entity.x - caster.x, entity.y - caster.y) || 1), dy: (entity.y - caster.y) / (Math.hypot(entity.x - caster.x, entity.y - caster.y) || 1), color: '#ffd66b', life: 0.18, maxLife: 0.18, range: Math.hypot(entity.x - caster.x, entity.y - caster.y) });
+      const targets = this.entities.filter((entity) => (
+        entity.alive &&
+        entity.id !== caster.id &&
+        Math.hypot(entity.x - caster.x, entity.y - caster.y) <= radius + (entity.hitRadius || entity.radius)
+      ));
+      targets.forEach((entity, index) => {
+        window.setTimeout(() => {
+          if (!entity.alive || !caster.alive) return;
+          const distance = Math.hypot(entity.x - caster.x, entity.y - caster.y) || 1;
+          this.effects.push({ type: 'line', x: caster.x, y: caster.y, dx: (entity.x - caster.x) / distance, dy: (entity.y - caster.y) / distance, color: '#ffd66b', life: 0.18, maxLife: 0.18, range: distance });
           this.damageEntity(entity, 10000, caster);
-        }
-      }
-      if (caster.controlled) this.game.audio.playEffect('/assets/audio/sniper-fire.wav', { volume: 0.86 });
+          this.playAttackProximitySound(caster, ['jaejun_cowboy'], '/assets/audio/sniper-fire.wav', { selfVolume: 0.86, maxVolume: 0.78, minVolume: 0.18, range: 720 });
+        }, index * 90);
+      });
     }, delay);
   }
 
@@ -1753,4 +1760,3 @@ export class GameScene {
     this.networkUnsubs = [];
   }
 }
-

@@ -160,7 +160,7 @@
         {
           "type": "delayedAreaShot",
           "delayMs": 3000,
-          "radius": 260
+          "radius": 92
         }
       ]
     }
