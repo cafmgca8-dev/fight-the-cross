@@ -69,8 +69,11 @@ export class GameScene {
       this.loadImage('/assets/characters/kiseong-reference.png').catch(() => null),
       this.loadImage('/assets/characters/hyoseong-reference.png').catch(() => null),
       this.loadImage('/assets/characters/jaejun-cowboy-reference.png').catch(() => null),
-      this.loadImage('/assets/characters/ain-hwang-general-reference.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralSprite]) => {
+      this.loadImage('/assets/characters/ain-hwang-general-front.png').catch(() => null),
+      this.loadImage('/assets/characters/ain-hwang-general-left.png').catch(() => null),
+      this.loadImage('/assets/characters/ain-hwang-general-right.png').catch(() => null),
+      this.loadImage('/assets/characters/ain-hwang-general-back.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack]) => {
       this.mapImage = image;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
@@ -78,7 +81,14 @@ export class GameScene {
       if (kiseongSprite) this.setupCharacterSprite('kiseong', kiseongSprite);
       if (hyoseongSprite) this.setupCharacterSprite('hyoseong', hyoseongSprite);
       if (jaejunCowboySprite) this.setupCharacterSprite('jaejun_cowboy', jaejunCowboySprite);
-      if (ainHwangGeneralSprite) this.setupCharacterSprite('ain_hwang_general', ainHwangGeneralSprite);
+      if (ainHwangGeneralFront || ainHwangGeneralLeft || ainHwangGeneralRight || ainHwangGeneralBack) {
+        this.processedCharacterSprites.ain_hwang_general = {
+          front: ainHwangGeneralFront,
+          left: ainHwangGeneralLeft,
+          right: ainHwangGeneralRight,
+          back: ainHwangGeneralBack
+        };
+      }
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -136,7 +146,7 @@ export class GameScene {
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
       ghostSpeed: 310,
       alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0,
-      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, waterSlowUntil: 0
+      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, damageReductionUntil: 0, damageTakenMultiplier: 1, waterSlowUntil: 0
     };
   }
 
@@ -840,14 +850,15 @@ export class GameScene {
   dashEntity(entity, nx, ny, distance) {
     const steps = Math.max(1, Math.ceil(distance / 10));
     const stepDistance = distance / steps;
+    const collisionRadius = Math.max(8, (entity.radius || 18) * 0.55);
     for (let i = 0; i < steps; i += 1) {
       const oldX = entity.x;
       const oldY = entity.y;
       entity.x += nx * stepDistance;
       entity.y += ny * stepDistance;
       this.game.mapManager.clampToArena(this.map, entity);
-      const outsideArena = !this.game.mapManager.isInsideArena(this.map, entity.x, entity.y, entity.radius);
-      const blockedByWall = this.isWallAt(entity.x, entity.y, entity.radius);
+      const outsideArena = !this.game.mapManager.isInsideArena(this.map, entity.x, entity.y, collisionRadius);
+      const blockedByWall = this.isWallAt(entity.x, entity.y, collisionRadius);
       if (outsideArena || blockedByWall) {
         entity.x = oldX;
         entity.y = oldY;
@@ -991,7 +1002,7 @@ export class GameScene {
   }
 
   addUltimateHit(entity) {
-    if (!['ain', 'jaejun', 'seojun', 'kiseong', 'hyoseong', 'jaejun_cowboy'].includes(entity?.character?.id)) return;
+    if (!['ain', 'jaejun', 'seojun', 'kiseong', 'hyoseong', 'jaejun_cowboy', 'ain_hwang_general'].includes(entity?.character?.id)) return;
     if (entity.ultimateReady) return;
     entity.ultimateHits = Math.min(3, (entity.ultimateHits || 0) + 1);
     if (entity.ultimateHits >= 3) entity.ultimateReady = true;
