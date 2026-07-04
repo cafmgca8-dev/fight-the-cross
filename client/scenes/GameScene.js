@@ -849,7 +849,7 @@ export class GameScene {
     for (const entity of targets) {
       const distance = Math.hypot(entity.x - this.storm.centerX, entity.y - this.storm.centerY);
       if (distance <= state.radius + (entity.radius || 0)) continue;
-      this.damageHazardEntity(entity, state.dps * this.storm.tick, '#8d7cff');
+      this.damageStormEntity(entity, state.dps * this.storm.tick);
     }
   }
 
