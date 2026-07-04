@@ -57,6 +57,7 @@ export class BoxScene {
     const image = overlay.querySelector('.box-reveal-image');
     const hint = overlay.querySelector('.box-reveal-hint');
     overlay.classList.add('is-shaking');
+    this.game.audio.playEffect('/assets/audio/box-shake-boing.wav', { volume: 0.78 });
     if (hint) hint.textContent = '상자 여는 중...';
 
     window.setTimeout(() => {
