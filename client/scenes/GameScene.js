@@ -63,10 +63,12 @@ export class GameScene {
     Promise.all([
       this.loadImage(map.image),
       map.collisionMask ? this.loadImage(map.collisionMask) : Promise.resolve(null),
-      this.loadImage('/assets/characters/jaejun-reference.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite]) => {
+      this.loadImage('/assets/characters/jaejun-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/ain-reference.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite]) => {
       this.mapImage = image;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
+      if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -1279,14 +1281,23 @@ export class GameScene {
 
   setupCharacterSprite(id, image) {
     this.characterSprites[id] = image;
-    if (id !== 'jaejun') return;
-    const crops = {
-      front: { x: 65, y: 382, width: 315, height: 505 },
-      left: { x: 465, y: 392, width: 245, height: 498 },
-      right: { x: 805, y: 392, width: 260, height: 498 },
-      back: { x: 1160, y: 392, width: 280, height: 498 }
+    const spriteCrops = {
+      jaejun: {
+        front: { x: 65, y: 382, width: 315, height: 505 },
+        left: { x: 465, y: 392, width: 245, height: 498 },
+        right: { x: 805, y: 392, width: 260, height: 498 },
+        back: { x: 1160, y: 392, width: 280, height: 498 }
+      },
+      ain: {
+        front: { x: 62, y: 404, width: 318, height: 482 },
+        left: { x: 462, y: 405, width: 260, height: 482 },
+        right: { x: 804, y: 405, width: 265, height: 482 },
+        back: { x: 1164, y: 405, width: 300, height: 482 }
+      }
     };
-    this.processedCharacterSprites.jaejun = Object.fromEntries(
+    const crops = spriteCrops[id];
+    if (!crops) return;
+    this.processedCharacterSprites[id] = Object.fromEntries(
       Object.entries(crops).map(([direction, crop]) => [direction, this.createTransparentSprite(image, crop)])
     );
   }
@@ -1316,7 +1327,7 @@ export class GameScene {
   }
 
   getCharacterSpriteMetrics(entity) {
-    if (entity.character?.id !== 'jaejun' || !this.processedCharacterSprites?.jaejun) return null;
+    if (!this.processedCharacterSprites?.[entity.character?.id]) return null;
     return { width: 58, height: 82 };
   }
 
