@@ -76,35 +76,6 @@
     }
   },
   {
-    "id": "minjun",
-    "name": "민준",
-    "rarity": "Basic",
-    "hp": 4200,
-    "maxLevel": 10,
-    "basicAttack": {
-      "name": "배트",
-      "damage": 850,
-      "effects": [
-        {
-          "type": "knockback",
-          "force": 70
-        }
-      ]
-    },
-    "ultimate": {
-      "name": "회전 강타",
-      "description": "주변 적에게 피해를 주고 밀쳐냄",
-      "damage": 1800,
-      "effects": [
-        {
-          "type": "areaKnockback",
-          "radius": 120,
-          "force": 110
-        }
-      ]
-    }
-  },
-  {
     "id": "kiseong",
     "name": "기성",
     "rarity": "Rare",
