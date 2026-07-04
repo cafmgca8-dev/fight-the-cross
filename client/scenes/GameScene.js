@@ -1002,6 +1002,7 @@ export class GameScene {
   }
 
   castKiseongUltimate(owner) {
+    this.playAttackProximitySound(owner, ['kiseong'], '/assets/audio/kiseong-ultimate-gulp.wav', { selfVolume: 0.88, maxVolume: 0.76, minVolume: 0.18, range: 720 });
     const duration = 5000;
     owner.speedBoostMultiplier = 0.55;
     owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + duration);
