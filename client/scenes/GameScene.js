@@ -128,7 +128,7 @@ export class GameScene {
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
       ghostSpeed: 310,
       alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0,
-      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0
+      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1
     };
   }
 
@@ -641,6 +641,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
+    if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 980, width: 4, hitRadius: 14, color: '#f8fbff', damageScale: 1.0 };
     if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.18, reloadTime: 1.15, range: 520, speed: 780, width: 6, hitRadius: 13, color: '#ff75c8', damageScale: 0.54 };
     if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.18, reloadTime: 1.05, range: 112, color: '#ffcc4d', damageScale: 0.95 };
@@ -699,8 +700,8 @@ export class GameScene {
       }
     }
 
-    if (profile.type === 'punch' || profile.type === 'bat') {
-      this.playAttackProximitySound(owner, ['ain', 'jaejun'], '/assets/audio/punch-swing.wav', { selfVolume: 0.68, maxVolume: 0.62, minVolume: 0.18, range: 520 });
+    if (profile.type === 'punch' || profile.type === 'bat' || profile.type === 'clap') {
+      this.playAttackProximitySound(owner, ['ain', 'jaejun', 'kiseong'], '/assets/audio/punch-swing.wav', { selfVolume: 0.68, maxVolume: 0.62, minVolume: 0.18, range: 560 });
       this.meleeAttack(owner, nx, ny, profile);
       return;
     }
@@ -734,16 +735,35 @@ export class GameScene {
   }
 
   meleeAttack(owner, nx, ny, profile) {
+    this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.18, maxLife: 0.18, range: profile.range, arcAngle: profile.arcAngle });
+    if (profile.type === 'clap') {
+      for (const entity of this.entities) {
+        if (!entity.alive || entity.id === owner.id) continue;
+        const dx = entity.x - owner.x;
+        const dy = entity.y - owner.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        if (distance > profile.range + (entity.hitRadius || entity.radius)) continue;
+        const dot = (dx / distance) * nx + (dy / distance) * ny;
+        const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+        if (angle <= (profile.arcAngle || Math.PI * 0.55) / 2) {
+          this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
+        }
+      }
+      return;
+    }
     const hitX = owner.x + nx * profile.range;
     const hitY = owner.y + ny * profile.range;
-    this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.18, maxLife: 0.18, range: profile.range });
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
       const distance = Math.hypot(entity.x - hitX, entity.y - hitY);
       if (distance <= (entity.hitRadius || entity.radius) + profile.range * 0.55) {
-        this.damageEntity(entity, owner.damage * profile.damageScale, owner);
+        this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
       }
     }
+  }
+
+  getAttackPowerMultiplier(entity) {
+    return performance.now() < (entity?.damageBoostUntil || 0) ? (entity.damageBoostMultiplier || 1) : 1;
   }
 
   fireProjectile(owner, nx, ny, profile, offsetX, offsetY) {
@@ -759,7 +779,7 @@ export class GameScene {
       radius: profile.width,
       hitRadius: profile.hitRadius || profile.width,
       travelLeft: Math.max(0, profile.range - 28),
-      damage: owner.damage * profile.damageScale,
+      damage: owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner),
       life: Math.max(0.05, (profile.range - 28) / profile.speed),
       color: profile.color,
       type: profile.type
@@ -880,7 +900,7 @@ export class GameScene {
   }
 
   addUltimateHit(entity) {
-    if (!['ain', 'jaejun', 'seojun'].includes(entity?.character?.id)) return;
+    if (!['ain', 'jaejun', 'seojun', 'kiseong'].includes(entity?.character?.id)) return;
     if (entity.ultimateReady) return;
     entity.ultimateHits = Math.min(3, (entity.ultimateHits || 0) + 1);
     if (entity.ultimateHits >= 3) entity.ultimateReady = true;
@@ -907,6 +927,7 @@ export class GameScene {
     if (id === 'ain') this.castAinUltimate(owner);
     else if (id === 'jaejun') this.castJaejunUltimate(owner);
     else if (id === 'seojun') this.castSeojunUltimate(owner, nx, ny);
+    else if (id === 'kiseong') this.castKiseongUltimate(owner);
   }
 
   castAinUltimate(owner) {
@@ -929,6 +950,15 @@ export class GameScene {
     owner.speedBoostMultiplier = 3.2;
     owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + 4200);
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ffdf6b', life: 0.62, maxLife: 0.62, radius: 105 });
+  }
+
+  castKiseongUltimate(owner) {
+    const duration = 5000;
+    owner.speedBoostMultiplier = 0.55;
+    owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + duration);
+    owner.damageBoostMultiplier = 2.4;
+    owner.damageBoostUntil = Math.max(owner.damageBoostUntil || 0, performance.now() + duration);
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ff7a3d', life: 0.7, maxLife: 0.7, radius: 120 });
   }
 
   castSeojunUltimate(owner, nx, ny) {
@@ -1434,13 +1464,29 @@ export class GameScene {
     ctx.globalAlpha = t;
     ctx.strokeStyle = effect.color;
     ctx.fillStyle = effect.color;
-    if (effect.type === 'punch' || effect.type === 'bat') {
-      ctx.lineWidth = effect.type === 'bat' ? 22 : 16;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(effect.x + effect.dx * 28, effect.y + effect.dy * 28);
-      ctx.lineTo(effect.x + effect.dx * effect.range, effect.y + effect.dy * effect.range);
-      ctx.stroke();
+    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap') {
+      if (effect.type === 'clap') {
+        const angle = Math.atan2(effect.dy, effect.dx);
+        const half = (effect.arcAngle || Math.PI * 0.58) / 2;
+        ctx.globalAlpha = t * 0.36;
+        ctx.beginPath();
+        ctx.moveTo(effect.x, effect.y);
+        ctx.arc(effect.x, effect.y, effect.range, angle - half, angle + half);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = t * 0.9;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.arc(effect.x, effect.y, effect.range, angle - half, angle + half);
+        ctx.stroke();
+      } else {
+        ctx.lineWidth = effect.type === 'bat' ? 22 : 16;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(effect.x + effect.dx * 28, effect.y + effect.dy * 28);
+        ctx.lineTo(effect.x + effect.dx * effect.range, effect.y + effect.dy * effect.range);
+        ctx.stroke();
+      }
     } else if (effect.type === 'ultimate-ring') {
       ctx.globalAlpha = t * 0.72;
       ctx.lineWidth = 10 * (1.1 - t);
