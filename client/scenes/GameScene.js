@@ -707,8 +707,14 @@ export class GameScene {
       }
     }
 
-    if (profile.type === 'punch' || profile.type === 'bat' || profile.type === 'clap' || profile.type === 'thrust') {
-      this.playAttackProximitySound(owner, ['ain', 'jaejun', 'kiseong', 'hyoseong'], '/assets/audio/punch-swing.wav', { selfVolume: 0.68, maxVolume: 0.62, minVolume: 0.18, range: 560 });
+    if (profile.type === 'thrust') {
+      this.playAttackProximitySound(owner, ['hyoseong'], '/assets/audio/hyoseong-whip-cut.wav', { selfVolume: 0.72, maxVolume: 0.62, minVolume: 0.16, range: 560 });
+      this.meleeAttack(owner, nx, ny, profile);
+      return;
+    }
+
+    if (profile.type === 'punch' || profile.type === 'bat' || profile.type === 'clap') {
+      this.playAttackProximitySound(owner, ['ain', 'jaejun', 'kiseong'], '/assets/audio/punch-swing.wav', { selfVolume: 0.68, maxVolume: 0.62, minVolume: 0.18, range: 560 });
       this.meleeAttack(owner, nx, ny, profile);
       return;
     }
