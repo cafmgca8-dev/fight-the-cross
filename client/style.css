@@ -1441,19 +1441,59 @@ body:not(.viewport-activated) #app {
   }
 }
 
+@media (orientation: portrait) and (max-width: 760px) and (max-height: 620px) {
+  .box-screen {
+    grid-template-rows: 28px 36px minmax(0, 1fr);
+  }
+
+  .box-screen .message-log {
+    display: none;
+  }
+
+  .box-screen .status-bar {
+    height: 28px;
+  }
+
+  .box-screen .status-item {
+    height: 21px;
+  }
+
+  .box-panel {
+    grid-template-rows: 0 32px minmax(0, 1fr) 36px;
+    padding: 6px;
+  }
+
+  .box-panel h2 {
+    display: none;
+  }
+
+  .box-screen .nav-row .btn,
+  .box-screen .button-grid .btn {
+    height: 36px;
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 760px) {
+  body:has(.box-screen) {
+    overflow: hidden;
+  }
+
   .app-shell:has(.box-screen) {
+    position: fixed;
+    inset: 0;
     min-height: 100dvh;
-    padding: max(6px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+    height: 100dvh;
+    padding: max(4px, env(safe-area-inset-top)) 6px max(4px, env(safe-area-inset-bottom));
     overflow: hidden;
   }
 
   .box-screen {
     width: 100%;
-    height: calc(100dvh - max(6px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+    height: 100%;
     min-height: 0;
-    gap: 6px;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 4px;
+    grid-template-rows: 32px 40px minmax(0, 1fr) 30px;
     overflow: hidden;
   }
 
@@ -1461,137 +1501,221 @@ body:not(.viewport-activated) #app {
     position: relative;
     top: auto;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px;
-    padding: 4px;
-    border-radius: 7px;
+    gap: 3px;
+    height: 32px;
+    min-height: 0;
+    padding: 3px;
+    border-radius: 6px;
   }
 
   .box-screen .status-item {
-    min-height: 34px;
-    padding: 4px 5px;
+    min-height: 0;
+    height: 24px;
+    padding: 2px 3px;
     gap: 0;
+    border-radius: 5px;
   }
 
   .box-screen .status-label {
-    font-size: 9px;
+    font-size: 8px;
+    line-height: 1;
   }
 
   .box-screen .status-value {
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1.1;
   }
 
   .box-screen .nav-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 5px;
+    min-height: 0;
   }
 
   .box-screen .nav-row .btn,
   .box-screen .button-grid .btn {
-    min-height: 44px;
-    font-size: 14px;
+    min-height: 0;
+    height: 40px;
+    border-radius: 7px;
+    font-size: 13px;
   }
 
   .box-panel {
     min-height: 0;
-    gap: 7px;
-    padding: 9px;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 18px 36px minmax(0, 1fr) 40px;
+    gap: 5px;
+    padding: 7px;
     overflow: hidden;
   }
 
   .box-panel h2 {
     margin: 0;
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1;
   }
 
   .box-panel .stat-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
+    gap: 4px;
     margin: 0;
+    min-height: 0;
   }
 
   .box-panel .stat {
-    min-height: 38px;
+    min-height: 0;
+    height: 36px;
     display: grid;
     justify-items: center;
     align-content: center;
-    gap: 1px;
-    padding: 4px;
-    border-radius: 7px;
+    gap: 0;
+    padding: 3px;
+    border-radius: 6px;
     background: rgba(255,255,255,.06);
     text-align: center;
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1;
   }
 
   .box-panel .stat strong {
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1;
   }
 
   .box-preview {
     min-height: 0;
-    height: clamp(112px, 26dvh, 180px);
+    height: 100%;
   }
 
   .box-preview img {
-    width: min(310px, 74vw);
-    max-height: clamp(108px, 25dvh, 172px);
+    width: min(285px, 72vw);
+    max-height: 100%;
   }
 
   .box-panel .button-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 7px;
+    gap: 5px;
+    min-height: 0;
   }
 
   .box-screen .message-log {
-    min-height: 34px;
-    max-height: 42px;
-    padding: 7px 9px;
-    font-size: 12px;
-    line-height: 1.25;
+    min-height: 0;
+    height: 30px;
+    padding: 5px 8px;
+    font-size: 11px;
+    line-height: 18px;
     overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
   .app-shell:has(.box-screen) {
-    padding: max(4px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom));
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    padding: max(3px, env(safe-area-inset-top)) 5px max(3px, env(safe-area-inset-bottom));
+    overflow: hidden;
   }
 
   .box-screen {
-    height: calc(100dvh - max(4px, env(safe-area-inset-top)) - max(4px, env(safe-area-inset-bottom)));
-    grid-template-columns: minmax(0, 1fr) minmax(210px, .42fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 6px;
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    grid-template-rows: 28px minmax(0, 1fr) 28px;
+    gap: 4px;
   }
 
   .box-screen .status-bar {
     grid-column: 1 / -1;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    height: 28px;
+    padding: 2px;
+  }
+
+  .box-screen .status-item {
+    height: 22px;
+  }
+
+  .box-screen .status-label {
+    display: none;
+  }
+
+  .box-screen .status-value {
+    font-size: 10px;
   }
 
   .box-screen .nav-row {
     grid-column: 2;
     grid-row: 2;
     align-self: start;
+    grid-template-columns: 1fr;
+  }
+
+  .box-screen .nav-row .btn,
+  .box-screen .button-grid .btn {
+    height: 34px;
+    font-size: 12px;
   }
 
   .box-panel {
     grid-column: 1;
     grid-row: 2 / 4;
+    grid-template-rows: 16px 32px minmax(0, 1fr) 36px;
+    padding: 6px;
+    gap: 4px;
   }
 
   .box-preview {
-    height: clamp(94px, 34dvh, 160px);
+    height: 100%;
   }
 
   .box-preview img {
-    max-height: clamp(90px, 33dvh, 154px);
+    width: min(270px, 50vw);
+    max-height: 100%;
   }
 
   .box-screen .message-log {
     grid-column: 2;
     grid-row: 3;
+    height: 28px;
+    padding: 4px 7px;
+    font-size: 10px;
+    line-height: 18px;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 760px) and (max-height: 620px) {
+  .box-screen {
+    grid-template-rows: 28px 36px minmax(0, 1fr);
+  }
+
+  .box-screen .message-log {
+    display: none;
+  }
+
+  .box-screen .status-bar {
+    height: 28px;
+  }
+
+  .box-screen .status-item {
+    height: 21px;
+  }
+
+  .box-panel {
+    grid-template-rows: 0 32px minmax(0, 1fr) 36px;
+    padding: 6px;
+  }
+
+  .box-panel h2 {
+    display: none;
+  }
+
+  .box-screen .nav-row .btn,
+  .box-screen .button-grid .btn {
+    height: 36px;
+    font-size: 12px;
   }
 }
