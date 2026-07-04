@@ -90,6 +90,7 @@ export class BoxScene {
         }
         rewardNode.innerHTML = '<span>골드 획득</span><strong>+' + reward.amount + '</strong><small>화면을 누르면 돌아갑니다</small>';
       } else if (reward?.type === 'character') {
+        this.showCharacterUnlockVideo(overlay);
         rewardNode.innerHTML = '<span>신규 캐릭터 획득</span><strong>' + reward.name + '</strong><small>화면을 누르면 돌아갑니다</small>';
       } else {
         rewardNode.innerHTML = '<span>보상 획득</span><strong>완료</strong><small>화면을 누르면 돌아갑니다</small>';
@@ -101,7 +102,22 @@ export class BoxScene {
       }, { once: true });
     };
 
-    window.setTimeout(showReward, reward?.type === 'coins' ? 620 : 220);
+    window.setTimeout(showReward, reward?.type === 'coins' ? 620 : 300);
+  }
+
+  showCharacterUnlockVideo(overlay) {
+    overlay.classList.add('is-character-reward');
+    const image = overlay.querySelector('.box-reveal-image');
+    if (!image) return;
+    const video = document.createElement('video');
+    video.className = 'box-reveal-video';
+    video.src = '/assets/ui/character-unlock.mp4';
+    video.autoplay = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.setAttribute('playsinline', '');
+    image.replaceWith(video);
+    video.play().catch(() => {});
   }
 
   updateCounters() {

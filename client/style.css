@@ -1331,6 +1331,22 @@ body:not(.viewport-activated) #app {
   animation: rewardPop .42s cubic-bezier(.18, 1.35, .32, 1) both;
 }
 
+.box-reveal-overlay.is-character-reward {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(77, 185, 255, .44), transparent 36%),
+    radial-gradient(circle at 50% 52%, rgba(67, 92, 255, .2), transparent 50%),
+    linear-gradient(180deg, rgba(7, 17, 38, .94), rgba(2, 4, 14, .98));
+}
+
+.box-reveal-video {
+  width: min(760px, 92vw);
+  max-height: min(68dvh, 510px);
+  object-fit: contain;
+  border-radius: 8px;
+  filter: drop-shadow(0 28px 42px rgba(0,0,0,.54));
+  animation: rewardPop .42s cubic-bezier(.18, 1.35, .32, 1) both;
+}
+
 .box-reveal-hint {
   min-height: 42px;
   padding: 10px 18px;
