@@ -1347,6 +1347,15 @@ body:not(.viewport-activated) #app {
   animation: rewardPop .42s cubic-bezier(.18, 1.35, .32, 1) both;
 }
 
+.box-reveal-character-image {
+  width: min(620px, 88vw);
+  max-height: min(66dvh, 560px);
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
+  animation: rewardPop .42s cubic-bezier(.18, 1.35, .32, 1) both;
+}
+
 .box-reveal-hint {
   min-height: 42px;
   padding: 10px 18px;

@@ -106,6 +106,23 @@ export class BoxScene {
     window.setTimeout(showReward, reward?.type === 'coins' ? 620 : 300);
   }
 
+  showCharacterRewardVisual(overlay, reward) {
+    if (reward?.characterId === 'kiseong') {
+      this.showCharacterRewardImage(overlay, '/assets/ui/reward-kiseong.png', '?? ??');
+      return;
+    }
+    this.showCharacterUnlockVideo(overlay);
+  }
+
+  showCharacterRewardImage(overlay, src, alt) {
+    overlay.classList.add('is-character-reward');
+    const image = overlay.querySelector('.box-reveal-image');
+    if (!image) return;
+    image.className = 'box-reveal-character-image';
+    image.src = src;
+    image.alt = alt;
+  }
+
   showCharacterUnlockVideo(overlay) {
     overlay.classList.add('is-character-reward');
     const image = overlay.querySelector('.box-reveal-image');
