@@ -164,5 +164,35 @@
         }
       ]
     }
+  },
+  {
+    "id": "ain_hwang_general",
+    "name": "아인-황장군",
+    "rarity": "Epic",
+    "hp": 5200,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "장군의 돌격검",
+      "damage": 950,
+      "effects": [
+        {
+          "type": "slashDash",
+          "range": 122,
+          "dashDistance": 122
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "용맹",
+      "description": "4초 동안 받는 피해가 30% 감소합니다.",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "damageReduction",
+          "value": 0.7,
+          "durationMs": 4000
+        }
+      ]
+    }
   }
 ]

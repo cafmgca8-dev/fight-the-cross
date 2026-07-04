@@ -24,6 +24,12 @@
         },
         {
           "type": "character",
+          "rarity": "Epic",
+          "onlyLocked": true,
+          "weight": 14
+        },
+        {
+          "type": "character",
           "rarity": "Legendary",
           "onlyLocked": true,
           "weight": 10
