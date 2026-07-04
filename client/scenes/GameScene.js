@@ -1005,6 +1005,7 @@ export class GameScene {
   }
 
   castHyoseongUltimate(owner) {
+    this.playAttackProximitySound(owner, ['hyoseong'], '/assets/audio/hyoseong-ultimate-splash.wav', { selfVolume: 0.88, maxVolume: 0.78, minVolume: 0.18, range: 760 });
     const duration = 5000;
     const until = performance.now() + duration;
     const slow = this.map.waterSpeedMultiplier || 0.38;
