@@ -66,13 +66,15 @@ export class GameScene {
       this.loadImage('/assets/characters/jaejun-reference.png').catch(() => null),
       this.loadImage('/assets/characters/ain-reference.png').catch(() => null),
       this.loadImage('/assets/characters/seojun-reference.png').catch(() => null),
-      this.loadImage('/assets/characters/kiseong-reference.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite]) => {
+      this.loadImage('/assets/characters/kiseong-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/hyoseong-reference.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite]) => {
       this.mapImage = image;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
       if (seojunSprite) this.setupCharacterSprite('seojun', seojunSprite);
       if (kiseongSprite) this.setupCharacterSprite('kiseong', kiseongSprite);
+      if (hyoseongSprite) this.setupCharacterSprite('hyoseong', hyoseongSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -130,7 +132,7 @@ export class GameScene {
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
       ghostSpeed: 310,
       alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0,
-      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1
+      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, waterSlowUntil: 0
     };
   }
 
@@ -627,7 +629,8 @@ export class GameScene {
     const nextX = entity.x + nx * entity.speed * delta;
     const nextY = entity.y + ny * entity.speed * delta;
     const terrainSlow = this.getTerrainSpeedMultiplier(nextX, nextY);
-    const slow = terrainSlow;
+    const statusSlow = performance.now() < (entity.waterSlowUntil || 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
+    const slow = Math.min(terrainSlow, statusSlow);
     const boost = performance.now() < (entity.speedBoostUntil || 0) ? (entity.speedBoostMultiplier || 3) : 1;
     entity.x += nx * entity.speed * boost * slow * delta;
     entity.y += ny * entity.speed * boost * slow * delta;
@@ -644,6 +647,7 @@ export class GameScene {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
+    if (id === 'hyoseong') return { type: 'thrust', cooldown: 0.18, reloadTime: 1.3, range: 210, width: 28, color: '#75d8ff', damageScale: 1.0 };
     if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 980, width: 4, hitRadius: 14, color: '#f8fbff', damageScale: 1.0 };
     if (id === 'jaejun') return { type: 'punch', cooldown: 0.18, reloadTime: 1.25, range: 92, color: '#9fd2ff', damageScale: 0.72 };
     return { type: 'punch', cooldown: 0.18, reloadTime: 1.28, range: 96, color: '#36d6a5', damageScale: 1 };
@@ -700,8 +704,8 @@ export class GameScene {
       }
     }
 
-    if (profile.type === 'punch' || profile.type === 'bat' || profile.type === 'clap') {
-      this.playAttackProximitySound(owner, ['ain', 'jaejun', 'kiseong'], '/assets/audio/punch-swing.wav', { selfVolume: 0.68, maxVolume: 0.62, minVolume: 0.18, range: 560 });
+    if (profile.type === 'punch' || profile.type === 'bat' || profile.type === 'clap' || profile.type === 'thrust') {
+      this.playAttackProximitySound(owner, ['ain', 'jaejun', 'kiseong', 'hyoseong'], '/assets/audio/punch-swing.wav', { selfVolume: 0.68, maxVolume: 0.62, minVolume: 0.18, range: 560 });
       this.meleeAttack(owner, nx, ny, profile);
       return;
     }
@@ -735,7 +739,7 @@ export class GameScene {
   }
 
   meleeAttack(owner, nx, ny, profile) {
-    this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.18, maxLife: 0.18, range: profile.range, arcAngle: profile.arcAngle });
+    this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.18, maxLife: 0.18, range: profile.range, width: profile.width, arcAngle: profile.arcAngle });
     if (profile.type === 'clap') {
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
@@ -746,6 +750,20 @@ export class GameScene {
         const dot = (dx / distance) * nx + (dy / distance) * ny;
         const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
         if (angle <= (profile.arcAngle || Math.PI * 0.55) / 2) {
+          this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
+        }
+      }
+      return;
+    }
+    if (profile.type === 'thrust') {
+      const startX = owner.x + nx * 18;
+      const startY = owner.y + ny * 18;
+      const endX = owner.x + nx * profile.range;
+      const endY = owner.y + ny * profile.range;
+      for (const entity of this.entities) {
+        if (!entity.alive || entity.id === owner.id) continue;
+        const hitSize = (entity.hitRadius || entity.radius) + (profile.width || 28);
+        if (this.distanceToSegment(entity.x, entity.y, startX, startY, endX, endY) <= hitSize) {
           this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
         }
       }
@@ -900,7 +918,7 @@ export class GameScene {
   }
 
   addUltimateHit(entity) {
-    if (!['ain', 'jaejun', 'seojun', 'kiseong'].includes(entity?.character?.id)) return;
+    if (!['ain', 'jaejun', 'seojun', 'kiseong', 'hyoseong'].includes(entity?.character?.id)) return;
     if (entity.ultimateReady) return;
     entity.ultimateHits = Math.min(3, (entity.ultimateHits || 0) + 1);
     if (entity.ultimateHits >= 3) entity.ultimateReady = true;
@@ -928,6 +946,7 @@ export class GameScene {
     else if (id === 'jaejun') this.castJaejunUltimate(owner);
     else if (id === 'seojun') this.castSeojunUltimate(owner, nx, ny);
     else if (id === 'kiseong') this.castKiseongUltimate(owner);
+    else if (id === 'hyoseong') this.castHyoseongUltimate(owner);
   }
 
   castAinUltimate(owner) {
@@ -959,6 +978,18 @@ export class GameScene {
     owner.damageBoostMultiplier = 2.4;
     owner.damageBoostUntil = Math.max(owner.damageBoostUntil || 0, performance.now() + duration);
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ff7a3d', life: 0.7, maxLife: 0.7, radius: 120 });
+  }
+
+  castHyoseongUltimate(owner) {
+    const duration = 5000;
+    const until = performance.now() + duration;
+    const slow = this.map.waterSpeedMultiplier || 0.38;
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === owner.id) continue;
+      entity.waterSlowUntil = Math.max(entity.waterSlowUntil || 0, until);
+      this.effects.push({ type: 'slow', x: entity.x, y: entity.y, color: '#75d8ff', life: 0.65, maxLife: 0.65, radius: 28, slow });
+    }
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#75d8ff', life: 0.75, maxLife: 0.75, radius: 180 });
   }
 
   castSeojunUltimate(owner, nx, ny) {
@@ -1222,6 +1253,26 @@ export class GameScene {
       ctx.restore();
       return;
     }
+    if (profile.type === 'thrust') {
+      ctx.globalAlpha = 0.24;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = profile.width || 28;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(player.x + this.attackVector.x * 18, player.y + this.attackVector.y * 18);
+      ctx.lineTo(player.x + this.attackVector.x * range, player.y + this.attackVector.y * range);
+      ctx.stroke();
+      ctx.globalAlpha = 0.62;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([18, 12]);
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x + this.attackVector.x * range, player.y + this.attackVector.y * range);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      return;
+    }
     ctx.globalAlpha = 0.48;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = profile.type === 'sniper' ? 8 : 14;
@@ -1354,6 +1405,12 @@ export class GameScene {
         back: { x: 1128, y: 360, width: 370, height: 560 }
       },
       kiseong: {
+        front: { x: 50, y: 410, width: 330, height: 485 },
+        left: { x: 438, y: 410, width: 300, height: 485 },
+        right: { x: 790, y: 410, width: 310, height: 485 },
+        back: { x: 1160, y: 410, width: 315, height: 485 }
+      },
+      hyoseong: {
         front: { x: 50, y: 410, width: 330, height: 485 },
         left: { x: 438, y: 410, width: 300, height: 485 },
         right: { x: 790, y: 410, width: 310, height: 485 },
@@ -1491,7 +1548,7 @@ export class GameScene {
     ctx.globalAlpha = t;
     ctx.strokeStyle = effect.color;
     ctx.fillStyle = effect.color;
-    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap') {
+    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'thrust') {
       if (effect.type === 'clap') {
         const angle = Math.atan2(effect.dy, effect.dx);
         const half = (effect.arcAngle || Math.PI * 0.58) / 2;
@@ -1507,7 +1564,7 @@ export class GameScene {
         ctx.arc(effect.x, effect.y, effect.range, angle - half, angle + half);
         ctx.stroke();
       } else {
-        ctx.lineWidth = effect.type === 'bat' ? 22 : 16;
+        ctx.lineWidth = effect.type === 'thrust' ? (effect.width || 28) : (effect.type === 'bat' ? 22 : 16);
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(effect.x + effect.dx * 28, effect.y + effect.dy * 28);
@@ -1519,6 +1576,17 @@ export class GameScene {
       ctx.lineWidth = 10 * (1.1 - t);
       ctx.beginPath();
       ctx.arc(effect.x, effect.y, (effect.radius || 80) * (1.15 - t * 0.15), 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (effect.type === 'slow') {
+      ctx.globalAlpha = t * 0.5;
+      ctx.fillStyle = 'rgba(117, 216, 255, 0.28)';
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, (effect.radius || 28) * (1.45 - t * 0.25), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = t * 0.85;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, (effect.radius || 28) * (1.2 - t * 0.15), 0, Math.PI * 2);
       ctx.stroke();
     } else if (effect.type === 'stun') {
       ctx.globalAlpha = t;

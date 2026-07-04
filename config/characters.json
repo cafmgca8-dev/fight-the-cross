@@ -105,5 +105,34 @@
         }
       ]
     }
+  },
+  {
+    "id": "hyoseong",
+    "name": "효성",
+    "rarity": "Rare",
+    "hp": 4300,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "빗자루 찌르기",
+      "damage": 880,
+      "effects": [
+        {
+          "type": "thrust",
+          "range": 210
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "물바닥",
+      "description": "바닥에 물을 부어 자신을 제외한 모든 플레이어를 물 위 이동속도만큼 느리게 만듭니다.",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "globalWaterSlow",
+          "speedMultiplier": 0.38,
+          "durationMs": 5000
+        }
+      ]
+    }
   }
 ]
