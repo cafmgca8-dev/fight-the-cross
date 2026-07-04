@@ -111,6 +111,10 @@ export class BoxScene {
       this.showCharacterRewardImage(overlay, '/assets/ui/reward-kiseong.png', '?? ??');
       return;
     }
+    if (reward?.characterId === 'hyoseong') {
+      this.showCharacterRewardImage(overlay, '/assets/ui/reward-hyoseong.png', '?? ??');
+      return;
+    }
     this.showCharacterUnlockVideo(overlay);
   }
 
