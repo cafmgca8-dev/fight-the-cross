@@ -1201,6 +1201,27 @@ export class GameScene {
     const profile = this.getAttackProfile(player);
     const range = profile.range;
     ctx.save();
+    if (profile.type === 'clap') {
+      const angle = Math.atan2(this.attackVector.y, this.attackVector.x);
+      const half = (profile.arcAngle || Math.PI * 0.58) / 2;
+      ctx.globalAlpha = 0.24;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.arc(player.x, player.y, range, angle - half, angle + half);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 0.58;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([18, 12]);
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, range, angle - half, angle + half);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      return;
+    }
     ctx.globalAlpha = 0.48;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = profile.type === 'sniper' ? 8 : 14;
