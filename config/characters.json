@@ -105,29 +105,6 @@
     }
   },
   {
-    "id": "harin",
-    "name": "하린",
-    "rarity": "Basic",
-    "hp": 3800,
-    "maxLevel": 10,
-    "basicAttack": {
-      "name": "쌍권총",
-      "damage": 700,
-      "effects": []
-    },
-    "ultimate": {
-      "name": "집중 사격",
-      "description": "가장 가까운 적에게 연속 사격",
-      "damage": 2200,
-      "effects": [
-        {
-          "type": "rapidFire",
-          "shots": 4
-        }
-      ]
-    }
-  },
-  {
     "id": "kiseong",
     "name": "기성",
     "rarity": "Rare",

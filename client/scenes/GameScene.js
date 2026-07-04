@@ -643,7 +643,6 @@ export class GameScene {
     const name = entity.character.basicAttack.name;
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'seojun' || name.includes('저격')) return { type: 'sniper', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 980, width: 4, hitRadius: 14, color: '#f8fbff', damageScale: 1.0 };
-    if (id === 'harin' || name.includes('쌍권총')) return { type: 'dual', cooldown: 0.18, reloadTime: 1.15, range: 520, speed: 780, width: 6, hitRadius: 13, color: '#ff75c8', damageScale: 0.54 };
     if (id === 'minjun' || name.includes('배트')) return { type: 'bat', cooldown: 0.18, reloadTime: 1.05, range: 112, color: '#ffcc4d', damageScale: 0.95 };
     if (id === 'jaejun') return { type: 'punch', cooldown: 0.18, reloadTime: 1.25, range: 92, color: '#9fd2ff', damageScale: 0.72 };
     return { type: 'punch', cooldown: 0.18, reloadTime: 1.28, range: 96, color: '#36d6a5', damageScale: 1 };
@@ -1568,3 +1567,4 @@ export class GameScene {
     this.networkUnsubs = [];
   }
 }
+
