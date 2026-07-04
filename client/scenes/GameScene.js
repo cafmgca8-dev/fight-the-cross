@@ -1297,17 +1297,18 @@ export class GameScene {
         back: { x: 1164, y: 405, width: 300, height: 482 }
       },
       seojun: {
-        front: { x: 62, y: 405, width: 320, height: 482 },
-        left: { x: 455, y: 405, width: 268, height: 482 },
-        right: { x: 804, y: 405, width: 268, height: 482 },
-        back: { x: 1164, y: 405, width: 305, height: 482 }
+        front: { x: 40, y: 360, width: 360, height: 560 },
+        left: { x: 425, y: 360, width: 330, height: 560 },
+        right: { x: 775, y: 360, width: 330, height: 560 },
+        back: { x: 1128, y: 360, width: 370, height: 560 }
       }
     };
     const crops = spriteCrops[id];
     if (!crops) return;
-    this.processedCharacterSprites[id] = Object.fromEntries(
+    const processed = Object.fromEntries(
       Object.entries(crops).map(([direction, crop]) => [direction, this.createTransparentSprite(image, crop)])
     );
+    if (Object.values(processed).some(Boolean)) this.processedCharacterSprites[id] = processed;
   }
 
   createTransparentSprite(image, crop) {
@@ -1317,12 +1318,15 @@ export class GameScene {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
     const data = ctx.getImageData(0, 0, crop.width, crop.height);
+    let visiblePixels = 0;
     for (let i = 0; i < data.data.length; i += 4) {
       const r = data.data[i];
       const g = data.data[i + 1];
       const b = data.data[i + 2];
       if (r > 235 && g > 235 && b > 235) data.data[i + 3] = 0;
+      else visiblePixels += 1;
     }
+    if (visiblePixels < 900) return null;
     ctx.putImageData(data, 0, 0);
     return canvas;
   }
@@ -1343,7 +1347,7 @@ export class GameScene {
     const spriteSet = this.processedCharacterSprites?.[entity.character?.id];
     if (!spriteSet) return false;
     const direction = this.getCharacterDirection(entity);
-    const sprite = spriteSet[direction] || spriteSet.front;
+    const sprite = spriteSet[direction] || spriteSet.front || spriteSet.left || spriteSet.right || spriteSet.back;
     if (!sprite) return false;
     const width = 58;
     const height = 82;
