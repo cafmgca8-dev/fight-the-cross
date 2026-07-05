@@ -1085,6 +1085,7 @@ export class GameScene {
   }
 
   castAinHwangGeneralUltimate(owner) {
+    this.playAttackProximitySound(owner, ['ain_hwang_general'], '/assets/audio/ain-hwang-general-ultimate.wav', { selfVolume: 0.9, maxVolume: 0.8, minVolume: 0.2, range: 760 });
     const duration = 4000;
     owner.damageTakenMultiplier = 0.7;
     owner.damageReductionUntil = Math.max(owner.damageReductionUntil || 0, performance.now() + duration);
