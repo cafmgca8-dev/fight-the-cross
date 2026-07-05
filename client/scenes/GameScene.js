@@ -721,7 +721,7 @@ export class GameScene {
     }
 
     if (profile.type === 'slashDash') {
-      this.playAttackProximitySound(owner, ['ain_hwang_general'], '/assets/audio/punch-swing.wav', { selfVolume: 0.72, maxVolume: 0.64, minVolume: 0.17, range: 620 });
+      this.playAttackProximitySound(owner, ['ain_hwang_general'], '/assets/audio/ain-hwang-general-slash.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 640 });
       this.meleeAttack(owner, nx, ny, profile);
       this.dashEntity(owner, nx, ny, profile.dashDistance || profile.range);
       return;
