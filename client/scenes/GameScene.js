@@ -191,7 +191,8 @@ export class GameScene {
       color: controlled ? '#36d6a5' : ['#ff5f6d', '#ffcc4d', '#7aa7ff', '#ff75c8'][Number(id.replace('bot', '')) - 1] || '#fff',
       ghostSpeed: 310,
       alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0,
-      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, damageReductionUntil: 0, damageTakenMultiplier: 1, waterSlowUntil: 0
+      ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, damageReductionUntil: 0, damageTakenMultiplier: 1, waterSlowUntil: 0,
+      lastCombatAt: performance.now(), regenTickTimer: 0
     };
   }
 
@@ -294,7 +295,7 @@ export class GameScene {
       const moved = start ? Math.hypot(event.clientX - start.x, event.clientY - start.y) : 0;
       reset();
       if (vector.power > 0.18 && moved > 10) {
-        this.performAttack(this.getControlledEntity(), vector.x, vector.y);
+        this.performAttack(this.getControlledEntity(), vector.x, vector.y, false, false, vector.power);
         return;
       }
       this.autoAttackNearest();
@@ -392,7 +393,7 @@ export class GameScene {
       if (!entity || entity.controlled || this.isControlBlocked(entity)) return;
       entity.ammo = Math.max(0, entity.ammo - 1);
       if (entity.ammo < entity.maxAmmo && entity.ammoReloadTimer <= 0) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
-      this.performAttack(entity, payload.dirX, payload.dirY, true, true);
+      this.performAttack(entity, payload.dirX, payload.dirY, true, true, payload.power || 1);
     }));
 
     this.networkUnsubs.push(this.game.network.on('playerUltimate', (payload) => {
@@ -580,6 +581,18 @@ export class GameScene {
     return this.getAreaMaskFlags(x, y, radius).wall || this.isInRectZones([...(this.map.walls || []), ...(this.map.cover || [])], x, y, radius);
   }
 
+  hasWallBetween(ax, ay, bx, by, radius = 3) {
+    const distance = Math.hypot(bx - ax, by - ay);
+    const steps = Math.max(1, Math.ceil(distance / 14));
+    for (let i = 1; i <= steps; i += 1) {
+      const t = i / steps;
+      const x = ax + (bx - ax) * t;
+      const y = ay + (by - ay) * t;
+      if (this.isWallAt(x, y, radius)) return true;
+    }
+    return false;
+  }
+
   isWaterAt(x, y, radius = 20) {
     return this.getAreaMaskFlags(x, y, radius).water || this.isInRectZones(this.map.waterZones, x, y, radius);
   }
@@ -622,6 +635,7 @@ export class GameScene {
     this.updateStorm(delta);
     this.updateFireZones(delta);
     this.updateAlcoholZones(delta);
+    this.updatePassiveRegen(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
     this.updateAmmo(delta);
@@ -712,7 +726,7 @@ export class GameScene {
     if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
     if (id === 'seojun_boxer') return { type: 'boxerPunch', cooldown: 0.18, reloadTime: 1.24, range: 112, width: 28, color: '#ff6b5f', damageScale: 1.0, knockback: 36 };
     if (id === 'hyoseong_gundam') return { type: 'rocket', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 620, width: 9, hitRadius: 24, color: '#ff7a2f', damageScale: 1.0, fireRadius: 76, fireDuration: 3.0, burnDuration: 4.0, burnDps: 115 };
-    if (id === 'jaejun_bartender') return { type: 'alcoholBottle', cooldown: 0.18, reloadTime: 1.42, range: 360, speed: 560, width: 8, hitRadius: 20, color: '#63d7ff', damageScale: 0, zoneRadius: 96, zoneDuration: 4.2, slowDuration: 2.4, slowMultiplier: 0.42, dps: 95 };
+    if (id === 'jaejun_bartender') return { type: 'alcoholBottle', cooldown: 0.18, reloadTime: 1.42, range: 285, speed: 560, width: 8, hitRadius: 20, color: '#63d7ff', damageScale: 0, zoneRadius: 96, zoneDuration: 4.2, slowDuration: 2.4, slowMultiplier: 0.42, dps: 95 };
     if (id === 'jaejun_cowboy') return { type: 'pistolBurst', cooldown: 0.18, reloadTime: 1.45, range: 430, speed: 900, width: 5, hitRadius: 15, spread: 0.13, color: '#ffd66b', damageScale: 1.0 };
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'hyoseong') return { type: 'thrust', cooldown: 0.18, reloadTime: 1.3, range: 210, width: 28, color: '#75d8ff', damageScale: 1.0 };
@@ -743,6 +757,7 @@ export class GameScene {
       if (!entity.alive || entity.id === owner.id) continue;
       if (!this.canSeeEntity(entity)) continue;
       const distance = Math.hypot(entity.x - owner.x, entity.y - owner.y);
+      if (owner.character?.id !== 'jaejun_bartender' && this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
       if (distance <= maxRange && distance < bestDistance) {
         best = entity;
         bestDistance = distance;
@@ -751,7 +766,7 @@ export class GameScene {
     return best;
   }
 
-  performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
+  performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false, power = 1) {
     if (!owner?.alive || this.isControlBlocked(owner)) return;
     if (owner.controlled && !ignorePlayerCooldown && this.attackCooldown > 0) return;
     const length = Math.hypot(dirX, dirY) || 1;
@@ -760,6 +775,7 @@ export class GameScene {
     owner.dirX = nx;
     owner.dirY = ny;
     const profile = this.getAttackProfile(owner);
+    const attackPower = Math.max(0.28, Math.min(1, power || 1));
     if (!fromNetwork) {
       if (owner.ammo <= 0) return;
       owner.ammo -= 1;
@@ -768,9 +784,10 @@ export class GameScene {
     if (owner.controlled) {
       this.attackCooldown = profile.cooldown;
       if (this.isMultiplayer && this.game.room?.code && !fromNetwork) {
-        this.game.network.sendPlayerAttack({ code: this.game.room.code, dirX: nx, dirY: ny });
+        this.game.network.sendPlayerAttack({ code: this.game.room.code, dirX: nx, dirY: ny, power: attackPower });
       }
     }
+    this.markCombat(owner);
 
     if (profile.type === 'slashDash') {
       this.playAttackProximitySound(owner, ['ain_hwang_general'], '/assets/audio/ain-hwang-general-slash.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 640 });
@@ -842,7 +859,7 @@ export class GameScene {
     if (profile.type === 'alcoholBottle') {
       this.playAttackProximitySound(owner, ['jaejun_bartender'], '/assets/audio/bartender-bottle-break.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 660 });
       this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.18, maxLife: 0.18, radius: 24 });
-      this.fireProjectile(owner, nx, ny, profile, 0, 0);
+      this.fireProjectile(owner, nx, ny, { ...profile, range: profile.range * attackPower }, 0, 0);
       return;
     }
 
@@ -870,6 +887,7 @@ export class GameScene {
     if (profile.type === 'clap') {
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
+        if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
         const dx = entity.x - owner.x;
         const dy = entity.y - owner.y;
         const distance = Math.hypot(dx, dy) || 1;
@@ -889,6 +907,7 @@ export class GameScene {
       const endY = owner.y + ny * profile.range;
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
+        if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
         const hitSize = (entity.hitRadius || entity.radius) + (profile.width || 28);
         if (this.distanceToSegment(entity.x, entity.y, startX, startY, endX, endY) <= hitSize) {
           this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
@@ -903,6 +922,7 @@ export class GameScene {
       const endY = owner.y + ny * profile.range;
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
+        if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
         const hitSize = (entity.hitRadius || entity.radius) + (profile.width || 32);
         if (this.distanceToSegment(entity.x, entity.y, startX, startY, endX, endY) <= hitSize) {
           this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
@@ -915,6 +935,7 @@ export class GameScene {
       const hitY = owner.y + ny * profile.range;
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
+        if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
         const distance = Math.hypot(entity.x - hitX, entity.y - hitY);
         if (distance <= (entity.hitRadius || entity.radius) + profile.range * 0.48) {
           this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
@@ -927,6 +948,7 @@ export class GameScene {
     const hitY = owner.y + ny * profile.range;
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
+      if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
       const distance = Math.hypot(entity.x - hitX, entity.y - hitY);
       if (distance <= (entity.hitRadius || entity.radius) + profile.range * 0.55) {
         this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
@@ -980,22 +1002,23 @@ export class GameScene {
 
   leapEntity(entity, nx, ny, distance) {
     const collisionRadius = Math.max(8, (entity.radius || 18) * 0.62);
-    const targetX = Math.max(0, Math.min(this.map.width, entity.x + nx * distance));
-    const targetY = Math.max(0, Math.min(this.map.height, entity.y + ny * distance));
-    for (let i = 0; i <= 18; i += 1) {
-      const ratio = 1 - i / 18;
-      const nextX = entity.x + (targetX - entity.x) * ratio;
-      const nextY = entity.y + (targetY - entity.y) * ratio;
+    const startX = entity.x;
+    const startY = entity.y;
+    const steps = Math.max(1, Math.ceil(distance / 12));
+    for (let i = 1; i <= steps; i += 1) {
+      const ratio = i / steps;
+      const nextX = Math.max(0, Math.min(this.map.width, startX + nx * distance * ratio));
+      const nextY = Math.max(0, Math.min(this.map.height, startY + ny * distance * ratio));
       if (
-        this.game.mapManager.isInsideArena(this.map, nextX, nextY, collisionRadius) &&
-        !this.isWallAt(nextX, nextY, collisionRadius)
+        !this.game.mapManager.isInsideArena(this.map, nextX, nextY, collisionRadius) ||
+        this.isWallAt(nextX, nextY, collisionRadius)
       ) {
-        entity.x = nextX;
-        entity.y = nextY;
-        this.game.mapManager.clampToArena(this.map, entity);
-        return;
+        break;
       }
+      entity.x = nextX;
+      entity.y = nextY;
     }
+    this.game.mapManager.clampToArena(this.map, entity);
   }
 
   fireProjectile(owner, nx, ny, profile, offsetX, offsetY) {
@@ -1036,6 +1059,7 @@ export class GameScene {
     }
     const damageMultiplier = performance.now() < (entity.damageReductionUntil || 0) ? (entity.damageTakenMultiplier || 0.7) : 1;
     entity.hp = Math.max(0, entity.hp - Math.round(amount * damageMultiplier));
+    this.markCombat(entity);
     if (entity.controlled) this.game.audio.playEffect('/assets/audio/hit-impact.wav', { volume: 0.78 });
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
     if (source && source.id !== entity.id && source.alive && this.addUltimateHit(source) && source.controlled && this.isMultiplayer) {
@@ -1111,6 +1135,7 @@ export class GameScene {
       return;
     }
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
+    this.markCombat(entity);
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color, life: 0.18, maxLife: 0.18, radius: 30 });
     if (entity.hp <= 0) this.turnIntoGhost(entity);
     if (entity.controlled && this.isMultiplayer) {
@@ -1137,6 +1162,7 @@ export class GameScene {
   damageStormEntity(entity, amount) {
     if (!entity.alive) return;
     entity.hp = Math.max(0, entity.hp - Math.round(amount));
+    this.markCombat(entity);
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#8d7cff', life: 0.18, maxLife: 0.18, radius: 30 });
     if (entity.hp <= 0) this.turnIntoGhost(entity);
     if (entity.controlled && this.isMultiplayer) {
@@ -1208,6 +1234,7 @@ export class GameScene {
     if (!entity.alive) return;
     const damageMultiplier = performance.now() < (entity.damageReductionUntil || 0) ? (entity.damageTakenMultiplier || 0.7) : 1;
     entity.hp = Math.max(0, entity.hp - Math.round(amount * damageMultiplier));
+    this.markCombat(entity);
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#ff7a2f', life: 0.2, maxLife: 0.2, radius: 26 });
     if (entity.hp <= 0) this.turnIntoGhost(entity);
     if (entity.controlled && this.isMultiplayer) {
@@ -1264,10 +1291,39 @@ export class GameScene {
     }
   }
 
+  updatePassiveRegen(delta) {
+    const modeId = this.game.getActiveMode()?.id;
+    if (modeId !== 'one_vs_one' && modeId !== 'free_for_all_5') return;
+    const now = performance.now();
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.hp >= entity.maxHp) continue;
+      if (this.isMultiplayer && !entity.controlled) continue;
+      if (now - (entity.lastCombatAt || 0) < 3000) continue;
+      if (this.isInStorm(entity)) continue;
+      entity.regenTickTimer = (entity.regenTickTimer || 0) - delta;
+      if (entity.regenTickTimer > 0) continue;
+      entity.regenTickTimer = 0.5;
+      const heal = Math.max(35, Math.round(entity.maxHp * 0.018));
+      entity.hp = Math.min(entity.maxHp, entity.hp + heal);
+      this.effects.push({ type: 'slow', x: entity.x, y: entity.y, color: '#74ffb7', life: 0.22, maxLife: 0.22, radius: 22 });
+      if (entity.controlled && this.isMultiplayer) {
+        this.stateSendTimer = 0;
+        this.broadcastState(1);
+      }
+    }
+  }
+
+  markCombat(entity) {
+    if (!entity) return;
+    entity.lastCombatAt = performance.now();
+    entity.regenTickTimer = 0.5;
+  }
+
   damageAlcoholEntity(entity, amount) {
     if (!entity.alive) return;
     const damageMultiplier = performance.now() < (entity.damageReductionUntil || 0) ? (entity.damageTakenMultiplier || 0.7) : 1;
     entity.hp = Math.max(0, entity.hp - Math.round(amount * damageMultiplier));
+    this.markCombat(entity);
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#63d7ff', life: 0.18, maxLife: 0.18, radius: 24 });
     if (entity.hp <= 0) this.turnIntoGhost(entity);
     if (entity.controlled && this.isMultiplayer) {
@@ -1338,6 +1394,7 @@ export class GameScene {
     if (owner.controlled && this.isMultiplayer && this.game.room?.code && !fromNetwork) {
       this.game.network.sendPlayerUltimate({ code: this.game.room.code, dirX: nx, dirY: ny, power });
     }
+    this.markCombat(owner);
     const id = owner.character.id;
     if (id === 'ain') this.castAinUltimate(owner);
     else if (id === 'jaejun') this.castJaejunUltimate(owner);
@@ -1359,6 +1416,7 @@ export class GameScene {
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#a9f5ff', life: stunDuration / 1000, maxLife: stunDuration / 1000, radius });
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
+      if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
       if (Math.hypot(entity.x - owner.x, entity.y - owner.y) <= radius + entity.radius) {
         entity.stunnedUntil = Math.max(entity.stunnedUntil || 0, stunUntil);
         this.effects.push({ type: 'stun', x: entity.x, y: entity.y, color: '#f8fbff', life: 1, maxLife: 1, radius: 18 });
@@ -1417,6 +1475,7 @@ export class GameScene {
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
       const distance = Math.hypot(entity.x - owner.x, entity.y - owner.y);
+      if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
       if (distance <= radius + (entity.hitRadius || entity.radius)) {
         this.damageEntity(entity, damage, owner);
         const pushX = distance > 1 ? (entity.x - owner.x) / distance : nx;
@@ -1449,6 +1508,7 @@ export class GameScene {
     }
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
+      if (this.hasWallBetween(startX, startY, entity.x, entity.y, 4)) continue;
       const hitSize = (entity.hitRadius || entity.radius) + pathRadius;
       if (this.distanceToSegment(entity.x, entity.y, startX, startY, endX, endY) <= hitSize) {
         this.damageEntity(entity, damage, owner);
@@ -1460,7 +1520,7 @@ export class GameScene {
 
   castJaejunBartenderUltimate(owner, nx, ny) {
     this.playAttackProximitySound(owner, ['jaejun_bartender'], '/assets/audio/bartender-bottle-break.wav', { selfVolume: 0.82, maxVolume: 0.72, minVolume: 0.18, range: 760 });
-    const range = 560;
+    const range = 430;
     const target = this.findTargetInDirection(owner, nx, ny, range, Math.PI * 0.34) || this.findNearestTarget(owner, range);
     const targetX = target?.x ?? owner.x + nx * range;
     const targetY = target?.y ?? owner.y + ny * range;
@@ -1533,6 +1593,7 @@ export class GameScene {
       const targets = this.entities.filter((entity) => (
         entity.alive &&
         entity.id !== caster.id &&
+        !this.hasWallBetween(caster.x, caster.y, entity.x, entity.y, 4) &&
         Math.hypot(entity.x - caster.x, entity.y - caster.y) <= radius + (entity.hitRadius || entity.radius)
       ));
       targets.forEach((entity, index) => {
@@ -1619,8 +1680,13 @@ export class GameScene {
       projectile.y += projectile.dirY * step;
       projectile.travelLeft = (projectile.travelLeft ?? 0) - step;
       projectile.life -= delta;
+      if ((!projectile.passThroughWalls && (this.isWallAt(projectile.x, projectile.y, 2) || this.hasWallBetween(oldX, oldY, projectile.x, projectile.y, 2))) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) {
+        if (projectile.type === 'rocket') this.explodeRocket(projectile);
+        projectile.life = 0;
+      }
       if (projectile.type !== 'alcoholBottle') {
         for (const entity of this.entities) {
+          if (projectile.life <= 0) break;
           if (!entity.alive || entity.id === projectile.ownerId) continue;
           const hitSize = (entity.hitRadius || entity.radius) + (projectile.hitRadius || projectile.radius);
           if (this.distanceToSegment(entity.x, entity.y, oldX, oldY, projectile.x, projectile.y) <= hitSize) {
@@ -1639,10 +1705,6 @@ export class GameScene {
             break;
           }
         }
-      }
-      if ((!projectile.passThroughWalls && this.isWallAt(projectile.x, projectile.y, 2)) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) {
-        if (projectile.type === 'rocket') this.explodeRocket(projectile);
-        projectile.life = 0;
       }
       if ((projectile.travelLeft ?? 0) <= 0) {
         if (projectile.type === 'rocket') this.explodeRocket(projectile);
@@ -1913,7 +1975,7 @@ export class GameScene {
       ctx.lineTo(player.x + vx * range, player.y + vy * range);
       ctx.stroke();
     } else if (id === 'jaejun_bartender') {
-      const range = 560;
+      const range = 430;
       ctx.globalAlpha = 0.46;
       ctx.lineWidth = 7;
       ctx.beginPath();
@@ -1977,8 +2039,9 @@ export class GameScene {
       return;
     }
     if (profile.type === 'alcoholBottle') {
-      const x = player.x + this.attackVector.x * range;
-      const y = player.y + this.attackVector.y * range;
+      const power = Math.max(0.28, Math.min(1, this.attackVector.power || 1));
+      const x = player.x + this.attackVector.x * range * power;
+      const y = player.y + this.attackVector.y * range * power;
       ctx.globalAlpha = 0.42;
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 6;
