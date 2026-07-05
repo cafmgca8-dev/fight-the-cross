@@ -21,6 +21,7 @@ export class BoxScene {
       '<div class="box-preview"><div class="box-preview-aura"></div><img src="/assets/ui/box-closed.png" alt="상자"></div>' +
       '<div class="button-grid box-actions"><button id="claimVictory" class="btn">승리 보상 테스트</button><button id="openBox" class="btn warning">상자 열기</button><button id="openGuaranteedBox" class="btn character-box-btn">500골드 확정 캐릭터</button></div>' +
       '</section>' +
+      '<button id="openGuaranteedBoxMobile" class="btn character-box-btn mobile-guaranteed-box-btn">500골드 확정 캐릭터</button>' +
       '<section class="message-log">' + this.game.message + '</section>' +
       '</main>');
 
@@ -29,7 +30,9 @@ export class BoxScene {
     });
     document.querySelector('#openBox').addEventListener('click', () => this.startReveal());
     document.querySelector('#claimVictory').addEventListener('click', () => this.game.recordVictory());
-    document.querySelector('#openGuaranteedBox').addEventListener('click', () => this.startReveal('guaranteed_character'));
+    document.querySelectorAll('#openGuaranteedBox, #openGuaranteedBoxMobile').forEach((button) => {
+      button.addEventListener('click', () => this.startReveal('guaranteed_character'));
+    });
   }
 
   startReveal(type = 'basic') {

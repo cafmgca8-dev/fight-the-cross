@@ -1405,7 +1405,7 @@ export class GameScene {
     else if (id === 'ain_hwang_general') this.castAinHwangGeneralUltimate(owner);
     else if (id === 'seojun_boxer') this.castSeojunBoxerUltimate(owner, nx, ny, power);
     else if (id === 'hyoseong_gundam') this.castHyoseongGundamUltimate(owner, nx, ny);
-    else if (id === 'jaejun_bartender') this.castJaejunBartenderUltimate(owner, nx, ny);
+    else if (id === 'jaejun_bartender') this.castJaejunBartenderUltimate(owner, nx, ny, power);
   }
 
   castAinUltimate(owner) {
@@ -1518,35 +1518,29 @@ export class GameScene {
     }
   }
 
-  castJaejunBartenderUltimate(owner, nx, ny) {
+  castJaejunBartenderUltimate(owner, nx, ny, power = 1) {
     this.playAttackProximitySound(owner, ['jaejun_bartender'], '/assets/audio/bartender-bottle-break.wav', { selfVolume: 0.82, maxVolume: 0.72, minVolume: 0.18, range: 760 });
-    const range = 430;
-    const target = this.findTargetInDirection(owner, nx, ny, range, Math.PI * 0.34) || this.findNearestTarget(owner, range);
-    const targetX = target?.x ?? owner.x + nx * range;
-    const targetY = target?.y ?? owner.y + ny * range;
-    const dx = targetX - owner.x;
-    const dy = targetY - owner.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const shotX = dx / len;
-    const shotY = dy / len;
-    this.effects.push({ type: 'muzzle', x: owner.x + shotX * 34, y: owner.y + shotY * 34, color: '#c078ff', life: 0.22, maxLife: 0.22, radius: 30 });
+    const aimPower = Math.max(0.28, Math.min(1, power || 1));
+    const range = 410 * aimPower;
+    this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: '#c078ff', life: 0.22, maxLife: 0.22, radius: 30 });
     this.projectiles.push({
       ownerId: owner.id,
-      x: owner.x + shotX * 28,
-      y: owner.y + shotY * 28,
-      dirX: shotX,
-      dirY: shotY,
+      x: owner.x + nx * 28,
+      y: owner.y + ny * 28,
+      dirX: nx,
+      dirY: ny,
       speed: 610,
       radius: 9,
       hitRadius: 24,
-      travelLeft: Math.min(range, len),
+      travelLeft: range,
       damage: 0,
-      life: 1.2,
+      life: Math.max(0.24, range / 610 + 0.08),
       color: '#c078ff',
       type: 'charmBottle',
-      homing: Boolean(target),
-      targetId: target?.id || null,
+      homing: false,
+      targetId: null,
       passThroughWalls: true,
+      charmRadius: 96,
       charmDuration: 3000,
       chargeUltimate: false
     });
@@ -1709,6 +1703,7 @@ export class GameScene {
       if ((projectile.travelLeft ?? 0) <= 0) {
         if (projectile.type === 'rocket') this.explodeRocket(projectile);
         if (projectile.type === 'alcoholBottle') this.spillAlcoholBottle(projectile);
+        if (projectile.type === 'charmBottle') this.spillCharmBottle(projectile);
         projectile.life = 0;
       }
     }
@@ -1732,6 +1727,24 @@ export class GameScene {
       slowMultiplier: projectile.slowMultiplier || 0.42,
       dps: projectile.dps || 95
     });
+  }
+
+  spillCharmBottle(projectile) {
+    if (projectile.spilled) return;
+    projectile.spilled = true;
+    const owner = this.entities.find((item) => item.id === projectile.ownerId);
+    const radius = projectile.charmRadius || 96;
+    this.effects.push({ type: 'ultimate-ring', x: projectile.x, y: projectile.y, color: '#c078ff', life: 0.46, maxLife: 0.46, radius });
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === projectile.ownerId) continue;
+      if (Math.hypot(entity.x - projectile.x, entity.y - projectile.y) <= radius + (entity.hitRadius || entity.radius)) {
+        this.applyBartenderCharm(owner, entity, projectile.charmDuration || 3000);
+        if (owner && this.addUltimateHit(owner) && owner.controlled && this.isMultiplayer) {
+          this.stateSendTimer = 0;
+          this.broadcastState(1);
+        }
+      }
+    }
   }
 
   findNearestProjectileTarget(projectile) {
@@ -1975,7 +1988,8 @@ export class GameScene {
       ctx.lineTo(player.x + vx * range, player.y + vy * range);
       ctx.stroke();
     } else if (id === 'jaejun_bartender') {
-      const range = 430;
+      const aimPower = Math.max(0.28, Math.min(1, this.ultimateVector.power || 1));
+      const range = 410 * aimPower;
       ctx.globalAlpha = 0.46;
       ctx.lineWidth = 7;
       ctx.beginPath();
@@ -1985,7 +1999,7 @@ export class GameScene {
       ctx.globalAlpha = 0.22;
       ctx.setLineDash([]);
       ctx.beginPath();
-      ctx.arc(player.x + vx * range, player.y + vy * range, 52, 0, Math.PI * 2);
+      ctx.arc(player.x + vx * range, player.y + vy * range, 96, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();

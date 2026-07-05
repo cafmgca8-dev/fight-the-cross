@@ -1474,6 +1474,52 @@ body:not(.viewport-activated) #app {
   }
 }
 
+.mobile-guaranteed-box-btn {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .box-screen {
+    padding-bottom: 54px;
+  }
+
+  .box-screen #openGuaranteedBox {
+    display: none;
+  }
+
+  .box-screen .mobile-guaranteed-box-btn {
+    display: block;
+    position: fixed;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 2000;
+    width: auto;
+    height: 46px;
+    min-height: 0;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.05;
+    box-shadow: 0 12px 30px rgba(45, 132, 255, .48);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .box-screen {
+    padding-bottom: 0;
+  }
+
+  .box-screen .mobile-guaranteed-box-btn {
+    left: auto;
+    right: max(6px, env(safe-area-inset-right));
+    bottom: max(6px, env(safe-area-inset-bottom));
+    width: 188px;
+    height: 36px;
+    font-size: 11px;
+  }
+}
+
 @media (max-width: 760px) {
   .box-panel {
     grid-template-rows: auto 34px minmax(78px, 1fr) auto;
