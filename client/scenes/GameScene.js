@@ -840,6 +840,7 @@ export class GameScene {
     }
 
     if (profile.type === 'alcoholBottle') {
+      this.playAttackProximitySound(owner, ['jaejun_bartender'], '/assets/audio/bartender-bottle-break.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 660 });
       this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.18, maxLife: 0.18, radius: 24 });
       this.fireProjectile(owner, nx, ny, profile, 0, 0);
       return;
@@ -1458,6 +1459,7 @@ export class GameScene {
   }
 
   castJaejunBartenderUltimate(owner, nx, ny) {
+    this.playAttackProximitySound(owner, ['jaejun_bartender'], '/assets/audio/bartender-bottle-break.wav', { selfVolume: 0.82, maxVolume: 0.72, minVolume: 0.18, range: 760 });
     const range = 560;
     const target = this.findTargetInDirection(owner, nx, ny, range, Math.PI * 0.34) || this.findNearestTarget(owner, range);
     const targetX = target?.x ?? owner.x + nx * range;
