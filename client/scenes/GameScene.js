@@ -25,6 +25,7 @@ export class GameScene {
     this.characterSprites = {};
     this.processedCharacterSprites = {};
     this.fireZones = [];
+    this.alcoholZones = [];
     this.fireImage = null;
     this.fireCrackleTimer = 0;
     this.storm = null;
@@ -84,8 +85,12 @@ export class GameScene {
       this.loadImage('/assets/characters/hyoseong-gundam-left.png').catch(() => null),
       this.loadImage('/assets/characters/hyoseong-gundam-right.png').catch(() => null),
       this.loadImage('/assets/characters/hyoseong-gundam-back.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-bartender-front.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-bartender-left.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-bartender-right.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-bartender-back.png').catch(() => null),
       this.loadImage('/assets/effects/fire-particle.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, fireImage]) => {
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, fireImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
@@ -116,6 +121,14 @@ export class GameScene {
           left: hyoseongGundamLeft,
           right: hyoseongGundamRight,
           back: hyoseongGundamBack
+        };
+      }
+      if (jaejunBartenderFront || jaejunBartenderLeft || jaejunBartenderRight || jaejunBartenderBack) {
+        this.processedCharacterSprites.jaejun_bartender = {
+          front: jaejunBartenderFront,
+          left: jaejunBartenderLeft,
+          right: jaejunBartenderRight,
+          back: jaejunBartenderBack
         };
       }
       this.setMaskImage(maskImage);
@@ -157,6 +170,7 @@ export class GameScene {
     this.projectiles = [];
     this.effects = [];
     this.fireZones = [];
+    this.alcoholZones = [];
     this.fireCrackleTimer = 0;
     this.startedAt = performance.now();
     this.setupStorm();
@@ -375,7 +389,7 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerAttack', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled || this.isStunned(entity)) return;
+      if (!entity || entity.controlled || this.isControlBlocked(entity)) return;
       entity.ammo = Math.max(0, entity.ammo - 1);
       if (entity.ammo < entity.maxAmmo && entity.ammoReloadTimer <= 0) entity.ammoReloadTimer = this.getAttackProfile(entity).reloadTime;
       this.performAttack(entity, payload.dirX, payload.dirY, true, true);
@@ -383,7 +397,7 @@ export class GameScene {
 
     this.networkUnsubs.push(this.game.network.on('playerUltimate', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
-      if (!entity || entity.controlled || this.isStunned(entity)) return;
+      if (!entity || entity.controlled || this.isControlBlocked(entity)) return;
       entity.ultimateReady = true;
       entity.ultimateHits = 3;
       this.performUltimate(entity, payload.dirX, payload.dirY, true, payload.power || 1);
@@ -602,10 +616,12 @@ export class GameScene {
 
   update(delta) {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
+    this.updateCharmedEntities(delta);
     this.updatePlayer(delta);
     this.updateSpecialZones(delta);
     this.updateStorm(delta);
     this.updateFireZones(delta);
+    this.updateAlcoholZones(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
     this.updateAmmo(delta);
@@ -618,7 +634,7 @@ export class GameScene {
 
   updatePlayer(delta) {
     const player = this.getControlledEntity();
-    if (!player || this.isStunned(player)) return;
+    if (!player || this.isControlBlocked(player)) return;
     const vector = this.getMoveVector();
     this.moveEntity(player, vector.x, vector.y, delta);
   }
@@ -636,7 +652,7 @@ export class GameScene {
 
   updateBots(delta) {
     const alive = this.entities.filter((entity) => entity.alive);
-    for (const bot of this.entities.filter((entity) => !entity.controlled && entity.alive && !this.isStunned(entity))) {
+    for (const bot of this.entities.filter((entity) => !entity.controlled && entity.alive && !this.isControlBlocked(entity))) {
       const target = alive.filter((entity) => entity.id !== bot.id).sort((a, b) => this.distance(bot, a) - this.distance(bot, b))[0];
       if (!target) continue;
       const dx = target.x - bot.x;
@@ -676,7 +692,8 @@ export class GameScene {
     const nextY = entity.y + ny * entity.speed * delta;
     const terrainSlow = this.getTerrainSpeedMultiplier(nextX, nextY);
     const statusSlow = performance.now() < (entity.waterSlowUntil || 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
-    const slow = Math.min(terrainSlow, statusSlow);
+    const alcoholSlow = performance.now() < (entity.alcoholSlowUntil || 0) ? (entity.alcoholSlowMultiplier || 0.45) : 1;
+    const slow = Math.min(terrainSlow, statusSlow, alcoholSlow);
     const boost = performance.now() < (entity.speedBoostUntil || 0) ? (entity.speedBoostMultiplier || 3) : 1;
     entity.x += nx * entity.speed * boost * slow * delta;
     entity.y += ny * entity.speed * boost * slow * delta;
@@ -695,6 +712,7 @@ export class GameScene {
     if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
     if (id === 'seojun_boxer') return { type: 'boxerPunch', cooldown: 0.18, reloadTime: 1.24, range: 112, width: 28, color: '#ff6b5f', damageScale: 1.0, knockback: 36 };
     if (id === 'hyoseong_gundam') return { type: 'rocket', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 620, width: 9, hitRadius: 24, color: '#ff7a2f', damageScale: 1.0, fireRadius: 76, fireDuration: 3.0, burnDuration: 4.0, burnDps: 115 };
+    if (id === 'jaejun_bartender') return { type: 'alcoholBottle', cooldown: 0.18, reloadTime: 1.42, range: 360, speed: 560, width: 8, hitRadius: 20, color: '#63d7ff', damageScale: 0, zoneRadius: 96, zoneDuration: 4.2, slowDuration: 2.4, slowMultiplier: 0.42, dps: 95 };
     if (id === 'jaejun_cowboy') return { type: 'pistolBurst', cooldown: 0.18, reloadTime: 1.45, range: 430, speed: 900, width: 5, hitRadius: 15, spread: 0.13, color: '#ffd66b', damageScale: 1.0 };
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'hyoseong') return { type: 'thrust', cooldown: 0.18, reloadTime: 1.3, range: 210, width: 28, color: '#75d8ff', damageScale: 1.0 };
@@ -734,7 +752,7 @@ export class GameScene {
   }
 
   performAttack(owner, dirX, dirY, ignorePlayerCooldown = false, fromNetwork = false) {
-    if (!owner?.alive || this.isStunned(owner)) return;
+    if (!owner?.alive || this.isControlBlocked(owner)) return;
     if (owner.controlled && !ignorePlayerCooldown && this.attackCooldown > 0) return;
     const length = Math.hypot(dirX, dirY) || 1;
     const nx = dirX / length;
@@ -818,6 +836,12 @@ export class GameScene {
       }
       this.fireProjectile(owner, nx, ny, profile, 0, 0);
       this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.2, maxLife: 0.2, radius: 28 });
+      return;
+    }
+
+    if (profile.type === 'alcoholBottle') {
+      this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.18, maxLife: 0.18, radius: 24 });
+      this.fireProjectile(owner, nx, ny, profile, 0, 0);
       return;
     }
 
@@ -990,6 +1014,12 @@ export class GameScene {
       life: Math.max(0.05, (profile.range - 28) / profile.speed),
       color: profile.color,
       type: profile.type,
+      passThroughWalls: profile.type === 'alcoholBottle',
+      zoneRadius: profile.zoneRadius || 0,
+      zoneDuration: profile.zoneDuration || 0,
+      slowDuration: profile.slowDuration || 0,
+      slowMultiplier: profile.slowMultiplier || 1,
+      dps: profile.dps || 0,
       fireRadius: profile.fireRadius || 0,
       fireDuration: profile.fireDuration || 0,
       burnDuration: profile.burnDuration || 0,
@@ -1185,6 +1215,66 @@ export class GameScene {
     }
   }
 
+  createAlcoholZone(x, y, ownerId, radius = 96, duration = 4.2, options = {}) {
+    this.alcoholZones.push({
+      x,
+      y,
+      ownerId,
+      radius,
+      life: duration,
+      maxLife: duration,
+      slowDuration: options.slowDuration || 2.4,
+      slowMultiplier: options.slowMultiplier || 0.42,
+      dps: options.dps || 95,
+      chargedIds: new Set()
+    });
+    this.effects.push({ type: 'ultimate-ring', x, y, color: '#63d7ff', life: 0.32, maxLife: 0.32, radius });
+  }
+
+  updateAlcoholZones(delta) {
+    if (this.finished) return;
+    const now = performance.now();
+    for (const zone of this.alcoholZones) {
+      zone.life -= delta;
+      for (const entity of this.entities) {
+        if (!entity.alive || entity.id === zone.ownerId) continue;
+        if (Math.hypot(entity.x - zone.x, entity.y - zone.y) <= zone.radius + (entity.radius || 0)) {
+          const owner = this.entities.find((item) => item.id === zone.ownerId);
+          if (owner?.controlled && !zone.chargedIds.has(entity.id)) {
+            zone.chargedIds.add(entity.id);
+            this.addUltimateHit(owner);
+          }
+          if (this.isMultiplayer && !entity.controlled) continue;
+          entity.alcoholSlowUntil = Math.max(entity.alcoholSlowUntil || 0, now + zone.slowDuration * 1000);
+          entity.alcoholSlowMultiplier = Math.min(entity.alcoholSlowMultiplier || 1, zone.slowMultiplier);
+          entity.alcoholDps = Math.max(entity.alcoholDps || 0, zone.dps);
+          entity.alcoholDamageUntil = Math.max(entity.alcoholDamageUntil || 0, now + 1000);
+        }
+      }
+    }
+    this.alcoholZones = this.alcoholZones.filter((zone) => zone.life > 0);
+    for (const entity of this.entities) {
+      if (!entity.alive || now >= (entity.alcoholDamageUntil || 0)) continue;
+      if (this.isMultiplayer && !entity.controlled) continue;
+      entity.alcoholTickTimer = (entity.alcoholTickTimer || 0) - delta;
+      if (entity.alcoholTickTimer > 0) continue;
+      entity.alcoholTickTimer = 0.5;
+      this.damageAlcoholEntity(entity, (entity.alcoholDps || 90) * 0.5);
+    }
+  }
+
+  damageAlcoholEntity(entity, amount) {
+    if (!entity.alive) return;
+    const damageMultiplier = performance.now() < (entity.damageReductionUntil || 0) ? (entity.damageTakenMultiplier || 0.7) : 1;
+    entity.hp = Math.max(0, entity.hp - Math.round(amount * damageMultiplier));
+    this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#63d7ff', life: 0.18, maxLife: 0.18, radius: 24 });
+    if (entity.hp <= 0) this.turnIntoGhost(entity);
+    if (entity.controlled && this.isMultiplayer) {
+      this.stateSendTimer = 0;
+      this.broadcastState(1);
+    }
+  }
+
   addUltimateHit(entity) {
     if (!entity?.character?.id) return false;
     if (entity.ultimateReady) return false;
@@ -1197,8 +1287,45 @@ export class GameScene {
     return performance.now() < (entity?.stunnedUntil || 0);
   }
 
+  isCharmed(entity) {
+    return performance.now() < (entity?.charmedUntil || 0);
+  }
+
+  isControlBlocked(entity) {
+    return this.isStunned(entity) || this.isCharmed(entity);
+  }
+
+  updateCharmedEntities(delta) {
+    const now = performance.now();
+    for (const entity of this.entities) {
+      if (!entity.alive || now >= (entity.charmedUntil || 0)) continue;
+      if (this.isMultiplayer && !entity.controlled) continue;
+      const caster = this.entities.find((item) => item.id === entity.charmedById);
+      if (!caster?.alive) continue;
+      const dx = caster.x - entity.x;
+      const dy = caster.y - entity.y;
+      const distance = Math.hypot(dx, dy) || 1;
+      if (distance <= 34) continue;
+      this.moveEntity(entity, dx / distance, dy / distance, delta * ((entity.charmedSpeed || 90) / Math.max(1, entity.speed || 240)));
+      this.effects.push({ type: 'slow', x: entity.x, y: entity.y, color: '#c078ff', life: 0.08, maxLife: 0.08, radius: 20 });
+    }
+  }
+
+  applyBartenderCharm(owner, entity, duration = 3000) {
+    if (!owner?.alive || !entity?.alive || entity.id === owner.id) return;
+    entity.charmedUntil = Math.max(entity.charmedUntil || 0, performance.now() + duration);
+    entity.charmedById = owner.id;
+    entity.charmedSpeed = 88;
+    this.effects.push({ type: 'ultimate-ring', x: entity.x, y: entity.y, color: '#c078ff', life: duration / 1000, maxLife: duration / 1000, radius: 52 });
+    if (entity.controlled) {
+      this.isAiming = false;
+      this.attackVector.power = 0;
+      this.ultimateVector.power = 0;
+    }
+  }
+
   performUltimate(owner, dirX, dirY, fromNetwork = false, power = 1) {
-    if (!owner?.alive || this.isStunned(owner)) return;
+    if (!owner?.alive || this.isControlBlocked(owner)) return;
     if (!owner.ultimateReady && !fromNetwork) return;
     const length = Math.hypot(dirX, dirY) || 1;
     const nx = dirX / length;
@@ -1220,6 +1347,7 @@ export class GameScene {
     else if (id === 'ain_hwang_general') this.castAinHwangGeneralUltimate(owner);
     else if (id === 'seojun_boxer') this.castSeojunBoxerUltimate(owner, nx, ny, power);
     else if (id === 'hyoseong_gundam') this.castHyoseongGundamUltimate(owner, nx, ny);
+    else if (id === 'jaejun_bartender') this.castJaejunBartenderUltimate(owner, nx, ny);
   }
 
   castAinUltimate(owner) {
@@ -1329,6 +1457,60 @@ export class GameScene {
     }
   }
 
+  castJaejunBartenderUltimate(owner, nx, ny) {
+    const range = 560;
+    const target = this.findTargetInDirection(owner, nx, ny, range, Math.PI * 0.34) || this.findNearestTarget(owner, range);
+    const targetX = target?.x ?? owner.x + nx * range;
+    const targetY = target?.y ?? owner.y + ny * range;
+    const dx = targetX - owner.x;
+    const dy = targetY - owner.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const shotX = dx / len;
+    const shotY = dy / len;
+    this.effects.push({ type: 'muzzle', x: owner.x + shotX * 34, y: owner.y + shotY * 34, color: '#c078ff', life: 0.22, maxLife: 0.22, radius: 30 });
+    this.projectiles.push({
+      ownerId: owner.id,
+      x: owner.x + shotX * 28,
+      y: owner.y + shotY * 28,
+      dirX: shotX,
+      dirY: shotY,
+      speed: 610,
+      radius: 9,
+      hitRadius: 24,
+      travelLeft: Math.min(range, len),
+      damage: 0,
+      life: 1.2,
+      color: '#c078ff',
+      type: 'charmBottle',
+      homing: Boolean(target),
+      targetId: target?.id || null,
+      passThroughWalls: true,
+      charmDuration: 3000,
+      chargeUltimate: false
+    });
+  }
+
+  findTargetInDirection(owner, nx, ny, range, maxAngle) {
+    let best = null;
+    let bestScore = Infinity;
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === owner.id) continue;
+      const dx = entity.x - owner.x;
+      const dy = entity.y - owner.y;
+      const distance = Math.hypot(dx, dy) || 1;
+      if (distance > range) continue;
+      const dot = (dx / distance) * nx + (dy / distance) * ny;
+      const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
+      if (angle > maxAngle) continue;
+      const score = distance + angle * 180;
+      if (score < bestScore) {
+        best = entity;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
   castCowboyUltimate(owner) {
     const standoffSound = this.playAttackProximitySound(owner, ['jaejun_cowboy'], '/assets/audio/cowboy-ultimate-standoff.mp3', { selfVolume: 0.82, maxVolume: 0.72, minVolume: 0.18, range: 720 });
     const radius = 92;
@@ -1435,23 +1617,34 @@ export class GameScene {
       projectile.y += projectile.dirY * step;
       projectile.travelLeft = (projectile.travelLeft ?? 0) - step;
       projectile.life -= delta;
-      for (const entity of this.entities) {
-        if (!entity.alive || entity.id === projectile.ownerId) continue;
-        const hitSize = (entity.hitRadius || entity.radius) + (projectile.hitRadius || projectile.radius);
-        if (this.distanceToSegment(entity.x, entity.y, oldX, oldY, projectile.x, projectile.y) <= hitSize) {
-          const owner = this.entities.find((item) => item.id === projectile.ownerId);
-          this.damageEntity(entity, projectile.damage, projectile.chargeUltimate === false ? null : owner);
-          if (projectile.type === 'rocket') this.explodeRocket(projectile);
-          projectile.life = 0;
-          break;
+      if (projectile.type !== 'alcoholBottle') {
+        for (const entity of this.entities) {
+          if (!entity.alive || entity.id === projectile.ownerId) continue;
+          const hitSize = (entity.hitRadius || entity.radius) + (projectile.hitRadius || projectile.radius);
+          if (this.distanceToSegment(entity.x, entity.y, oldX, oldY, projectile.x, projectile.y) <= hitSize) {
+            const owner = this.entities.find((item) => item.id === projectile.ownerId);
+            if (projectile.type === 'charmBottle') {
+              this.applyBartenderCharm(owner, entity, projectile.charmDuration || 3000);
+              if (owner && this.addUltimateHit(owner) && owner.controlled && this.isMultiplayer) {
+                this.stateSendTimer = 0;
+                this.broadcastState(1);
+              }
+            } else {
+              this.damageEntity(entity, projectile.damage, projectile.chargeUltimate === false ? null : owner);
+            }
+            if (projectile.type === 'rocket') this.explodeRocket(projectile);
+            projectile.life = 0;
+            break;
+          }
         }
       }
-      if (this.isWallAt(projectile.x, projectile.y, 2) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) {
+      if ((!projectile.passThroughWalls && this.isWallAt(projectile.x, projectile.y, 2)) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) {
         if (projectile.type === 'rocket') this.explodeRocket(projectile);
         projectile.life = 0;
       }
       if ((projectile.travelLeft ?? 0) <= 0) {
         if (projectile.type === 'rocket') this.explodeRocket(projectile);
+        if (projectile.type === 'alcoholBottle') this.spillAlcoholBottle(projectile);
         projectile.life = 0;
       }
     }
@@ -1464,6 +1657,16 @@ export class GameScene {
     this.createFireZone(projectile.x, projectile.y, projectile.ownerId, projectile.fireRadius || 76, projectile.fireDuration || 3, {
       burnDuration: projectile.burnDuration || 4,
       burnDps: projectile.burnDps || 115
+    });
+  }
+
+  spillAlcoholBottle(projectile) {
+    if (projectile.spilled) return;
+    projectile.spilled = true;
+    this.createAlcoholZone(projectile.x, projectile.y, projectile.ownerId, projectile.zoneRadius || 96, projectile.zoneDuration || 4.2, {
+      slowDuration: projectile.slowDuration || 2.4,
+      slowMultiplier: projectile.slowMultiplier || 0.42,
+      dps: projectile.dps || 95
     });
   }
 
@@ -1555,6 +1758,7 @@ export class GameScene {
     this.drawStorm(ctx);
     this.drawZones(ctx);
     this.drawFireZones(ctx);
+    this.drawAlcoholZones(ctx);
     this.drawAimLine(ctx);
     this.drawUltimateAimLine(ctx);
     this.effects.forEach((effect) => this.drawEffect(ctx, effect));
@@ -1639,6 +1843,31 @@ export class GameScene {
     }
   }
 
+  drawAlcoholZones(ctx) {
+    if (!this.alcoholZones?.length) return;
+    for (const zone of this.alcoholZones) {
+      const t = Math.max(0, zone.life / zone.maxLife);
+      ctx.save();
+      ctx.globalAlpha = 0.34 + t * 0.2;
+      const gradient = ctx.createRadialGradient(zone.x, zone.y, zone.radius * 0.1, zone.x, zone.y, zone.radius);
+      gradient.addColorStop(0, 'rgba(151, 232, 255, 0.72)');
+      gradient.addColorStop(0.58, 'rgba(96, 126, 255, 0.42)');
+      gradient.addColorStop(1, 'rgba(153, 82, 255, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.ellipse(zone.x, zone.y, zone.radius * 1.05, zone.radius * 0.72, Math.sin(zone.x + zone.y) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = '#b7f2ff';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([12, 10]);
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   drawUltimateAimLine(ctx) {
     const player = this.getControlledEntity();
     if (this.ultimatePointerId === null || !player?.alive || !player.ultimateReady) return;
@@ -1681,6 +1910,19 @@ export class GameScene {
       ctx.moveTo(player.x, player.y);
       ctx.lineTo(player.x + vx * range, player.y + vy * range);
       ctx.stroke();
+    } else if (id === 'jaejun_bartender') {
+      const range = 560;
+      ctx.globalAlpha = 0.46;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x + vx * range, player.y + vy * range);
+      ctx.stroke();
+      ctx.globalAlpha = 0.22;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(player.x + vx * range, player.y + vy * range, 52, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
   }
@@ -1729,6 +1971,27 @@ export class GameScene {
       ctx.lineTo(player.x + this.attackVector.x * range, player.y + this.attackVector.y * range);
       ctx.stroke();
       ctx.setLineDash([]);
+      ctx.restore();
+      return;
+    }
+    if (profile.type === 'alcoholBottle') {
+      const x = player.x + this.attackVector.x * range;
+      const y = player.y + this.attackVector.y * range;
+      ctx.globalAlpha = 0.42;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.setLineDash([18, 12]);
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.24;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x, y, profile.zoneRadius || 96, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
       return;
     }
@@ -2056,16 +2319,23 @@ export class GameScene {
     ctx.shadowColor = projectile.color;
     ctx.shadowBlur = projectile.type === 'sniper' ? 18 : 10;
     ctx.beginPath();
-    if (projectile.type === 'missile' || projectile.type === 'rocket') {
+    if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle') {
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
       ctx.beginPath();
-      ctx.moveTo(projectile.type === 'rocket' ? 20 : 16, 0);
-      ctx.lineTo(-12, -8);
-      ctx.lineTo(-6, 0);
-      ctx.lineTo(-12, 8);
-      ctx.closePath();
-      ctx.fill();
+      if (projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle') {
+        ctx.fillStyle = projectile.type === 'charmBottle' ? '#c078ff' : '#63d7ff';
+        ctx.fillRect(-14, -5, 24, 10);
+        ctx.fillStyle = '#f8fbff';
+        ctx.fillRect(8, -3, 8, 6);
+      } else {
+        ctx.moveTo(projectile.type === 'rocket' ? 20 : 16, 0);
+        ctx.lineTo(-12, -8);
+        ctx.lineTo(-6, 0);
+        ctx.lineTo(-12, 8);
+        ctx.closePath();
+        ctx.fill();
+      }
       if (projectile.type === 'rocket') {
         ctx.globalAlpha = 0.5;
         ctx.fillStyle = '#ffd36a';

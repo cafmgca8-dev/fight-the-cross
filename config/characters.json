@@ -255,5 +255,37 @@
         }
       ]
     }
+  },
+  {
+    "id": "jaejun_bartender",
+    "name": "\uc7ac\uc900-\ubc14\ud150\ub354",
+    "rarity": "Rare",
+    "hp": 4500,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "\uc220\ubcd1 \ud22c\ucc99",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "alcoholZone",
+          "range": 360,
+          "radius": 96,
+          "slowMultiplier": 0.42,
+          "dps": 95
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "\ud2b9\uc81c \uce75\ud14c\uc77c",
+      "description": "\uc801\uc744 3\ucd08 \ub3d9\uc548 \ucde8\ud558\uac8c \ub9cc\ub4e4\uc5b4 \uc870\uc791\uc744 \ub9c9\uace0 \uc790\uc2e0\uc5d0\uac8c \ucc9c\ucc9c\ud788 \ub2e4\uac00\uc624\uac8c \ud569\ub2c8\ub2e4.",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "charm",
+          "durationMs": 3000,
+          "range": 560
+        }
+      ]
+    }
   }
 ]
