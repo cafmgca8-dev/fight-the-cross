@@ -319,5 +319,35 @@
         }
       ]
     }
+  },
+  {
+    "id": "ain_haru_butler",
+    "name": "\uc544\uc778-\ud558\ub8e8\uc9d1\uc0ac",
+    "rarity": "Hero",
+    "hp": 4500,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "\uace0\uc591\uc774 \uc7a5\ub09c\uac10 \ucc0c\ub974\uae30",
+      "damage": 820,
+      "effects": [
+        {
+          "type": "shortThrust",
+          "range": 112
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "\ud558\ub8e8 \uae09\uc2b5",
+      "description": "\uc6d0\ud558\ub294 \uc704\uce58\uc5d0 \uacf5\uc744 \ub358\uc838 0.7\ucd08 \ub4a4 \uace0\uc591\uc774\uac00 \ud280\uc5b4\ub098\uc640 \uc6d0 \uc548\uc758 \uc801\uc5d0\uac8c \ud53c\ud574\ub97c \uc90d\ub2c8\ub2e4.",
+      "damage": 1700,
+      "effects": [
+        {
+          "type": "delayedCatPounce",
+          "range": 410,
+          "radius": 96,
+          "delayMs": 700
+        }
+      ]
+    }
   }
 ]

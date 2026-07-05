@@ -26,7 +26,9 @@ export class GameScene {
     this.processedCharacterSprites = {};
     this.fireZones = [];
     this.alcoholZones = [];
+    this.catPounceZones = [];
     this.fireImage = null;
+    this.catPounceImage = null;
     this.fireCrackleTimer = 0;
     this.storm = null;
   }
@@ -90,10 +92,13 @@ export class GameScene {
       this.loadImage('/assets/characters/jaejun-bartender-right.png').catch(() => null),
       this.loadImage('/assets/characters/jaejun-bartender-back.png').catch(() => null),
       this.loadImage('/assets/characters/ain-artcat-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/ain-haru-butler-reference.png').catch(() => null),
+      this.loadImage('/assets/effects/haru-cat-pounce.png').catch(() => null),
       this.loadImage('/assets/effects/fire-particle.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, fireImage]) => {
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, catPounceImage, fireImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
+      this.catPounceImage = catPounceImage;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
       if (seojunSprite) this.setupCharacterSprite('seojun', seojunSprite);
@@ -133,6 +138,7 @@ export class GameScene {
         };
       }
       if (ainArtcatSprite) this.setupCharacterSprite('ain_artcat', ainArtcatSprite);
+      if (ainHaruButlerSprite) this.setupCharacterSprite('ain_haru_butler', ainHaruButlerSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -173,6 +179,7 @@ export class GameScene {
     this.effects = [];
     this.fireZones = [];
     this.alcoholZones = [];
+    this.catPounceZones = [];
     this.fireCrackleTimer = 0;
     this.startedAt = performance.now();
     this.setupStorm();
@@ -639,6 +646,7 @@ export class GameScene {
     this.updateStorm(delta);
     this.updateFireZones(delta);
     this.updateAlcoholZones(delta);
+    this.updateCatPounceZones(delta);
     this.updatePassiveRegen(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
@@ -729,6 +737,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
+    if (id === 'ain_haru_butler') return { type: 'shortThrust', cooldown: 0.18, reloadTime: 1.28, range: 112, width: 26, color: '#ffd6e8', damageScale: 1.0 };
     if (id === 'ain_artcat') return { type: 'paintCone', cooldown: 0.18, reloadTime: 1.36, range: 150, arcAngle: Math.PI * 0.46, color: '#ff6fcf', damageScale: 1.0, slowPerHit: 0.05, slowResetMs: 2000 };
     if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
     if (id === 'seojun_boxer') return { type: 'boxerPunch', cooldown: 0.18, reloadTime: 1.24, range: 112, width: 28, color: '#ff6b5f', damageScale: 1.0, knockback: 36 };
@@ -809,15 +818,15 @@ export class GameScene {
       return;
     }
 
-    if (profile.type === 'thrust' || profile.type === 'slashDash') {
-      this.playAttackProximitySound(owner, ['hyoseong'], '/assets/audio/hyoseong-whip-cut.wav', { selfVolume: 0.72, maxVolume: 0.62, minVolume: 0.16, range: 560 });
+    if (profile.type === 'thrust' || profile.type === 'shortThrust' || profile.type === 'slashDash') {
+      this.playAttackProximitySound(owner, ['hyoseong', 'ain_haru_butler'], '/assets/audio/hyoseong-whip-cut.wav', { selfVolume: 0.72, maxVolume: 0.62, minVolume: 0.16, range: 560 });
       this.meleeAttack(owner, nx, ny, profile);
       return;
     }
 
     if (profile.type === 'clap' || profile.type === 'paintCone') {
       const soundIds = profile.type === 'paintCone' ? ['ain_artcat'] : ['kiseong'];
-      const sound = profile.type === 'paintCone' ? '/assets/audio/hyoseong-whip-cut.wav' : '/assets/audio/kiseong-slap.wav';
+      const sound = profile.type === 'paintCone' ? '/assets/audio/ain-artcat-brush-attack.wav' : '/assets/audio/kiseong-slap.wav';
       this.playAttackProximitySound(owner, soundIds, sound, { selfVolume: 0.74, maxVolume: 0.64, minVolume: 0.17, range: 580 });
       this.meleeAttack(owner, nx, ny, profile);
       return;
@@ -910,7 +919,7 @@ export class GameScene {
       }
       return;
     }
-    if (profile.type === 'thrust') {
+    if (profile.type === 'thrust' || profile.type === 'shortThrust') {
       const startX = owner.x + nx * 18;
       const startY = owner.y + ny * 18;
       const endX = owner.x + nx * profile.range;
@@ -1433,6 +1442,7 @@ export class GameScene {
   }
 
   summonArtcatClone(owner) {
+    this.playAttackProximitySound(owner, ['ain_artcat'], '/assets/audio/ain-artcat-brush-ultimate.wav', { selfVolume: 0.86, maxVolume: 0.74, minVolume: 0.18, range: 720 });
     const now = performance.now();
     const marks = Object.values(owner.artcatMarks || {})
       .filter((mark) => mark.hits >= 2 && (!mark.expiresAt || mark.expiresAt > now));
@@ -1497,6 +1507,7 @@ export class GameScene {
     else if (id === 'hyoseong_gundam') this.castHyoseongGundamUltimate(owner, nx, ny);
     else if (id === 'jaejun_bartender') this.castJaejunBartenderUltimate(owner, nx, ny, power);
     else if (id === 'ain_artcat') this.summonArtcatClone(owner);
+    else if (id === 'ain_haru_butler') this.castAinHaruButlerUltimate(owner, nx, ny, power);
   }
 
   castAinUltimate(owner) {
@@ -1637,6 +1648,34 @@ export class GameScene {
     });
   }
 
+  castAinHaruButlerUltimate(owner, nx, ny, power = 1) {
+    const aimPower = Math.max(0.28, Math.min(1, power || 1));
+    const range = 410 * aimPower;
+    this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: '#ffd6e8', life: 0.22, maxLife: 0.22, radius: 28 });
+    this.projectiles.push({
+      ownerId: owner.id,
+      x: owner.x + nx * 28,
+      y: owner.y + ny * 28,
+      dirX: nx,
+      dirY: ny,
+      speed: 620,
+      radius: 10,
+      hitRadius: 0,
+      travelLeft: range,
+      damage: 0,
+      life: Math.max(0.24, range / 620 + 0.08),
+      color: '#ffd6e8',
+      type: 'catBall',
+      homing: false,
+      targetId: null,
+      passThroughWalls: true,
+      catRadius: 96,
+      catDelay: 0.7,
+      catDamage: owner.character?.ultimate?.damage || 1700,
+      chargeUltimate: false
+    });
+  }
+
   findTargetInDirection(owner, nx, ny, range, maxAngle) {
     let best = null;
     let bestScore = Infinity;
@@ -1769,7 +1808,7 @@ export class GameScene {
         if (projectile.type === 'rocket') this.explodeRocket(projectile);
         projectile.life = 0;
       }
-      if (projectile.type !== 'alcoholBottle') {
+      if (projectile.type !== 'alcoholBottle' && projectile.type !== 'catBall') {
         for (const entity of this.entities) {
           if (projectile.life <= 0) break;
           if (!entity.alive || entity.id === projectile.ownerId) continue;
@@ -1795,6 +1834,7 @@ export class GameScene {
         if (projectile.type === 'rocket') this.explodeRocket(projectile);
         if (projectile.type === 'alcoholBottle') this.spillAlcoholBottle(projectile);
         if (projectile.type === 'charmBottle') this.spillCharmBottle(projectile);
+        if (projectile.type === 'catBall') this.createCatPounceZone(projectile);
         projectile.life = 0;
       }
     }
@@ -1836,6 +1876,43 @@ export class GameScene {
         }
       }
     }
+  }
+
+  createCatPounceZone(projectile) {
+    if (projectile.spilled) return;
+    projectile.spilled = true;
+    this.catPounceZones.push({
+      x: projectile.x,
+      y: projectile.y,
+      ownerId: projectile.ownerId,
+      radius: projectile.catRadius || 96,
+      delay: projectile.catDelay || 0.7,
+      damage: projectile.catDamage || 1700,
+      life: (projectile.catDelay || 0.7) + 0.42,
+      triggered: false
+    });
+    this.effects.push({ type: 'catWarning', x: projectile.x, y: projectile.y, color: '#ffd6e8', life: projectile.catDelay || 0.7, maxLife: projectile.catDelay || 0.7, radius: projectile.catRadius || 96 });
+  }
+
+  updateCatPounceZones(delta) {
+    if (!this.catPounceZones.length) return;
+    for (const zone of this.catPounceZones) {
+      zone.life -= delta;
+      zone.delay -= delta;
+      if (!zone.triggered && zone.delay <= 0) {
+        zone.triggered = true;
+        const owner = this.entities.find((entity) => entity.id === zone.ownerId);
+        this.playAttackProximitySound(owner, ['ain_haru_butler'], '/assets/audio/ain-haru-cat-meow.wav', { selfVolume: 0.9, maxVolume: 0.78, minVolume: 0.2, range: 760 });
+        this.effects.push({ type: 'catPounce', x: zone.x, y: zone.y, color: '#ffd6e8', life: 0.42, maxLife: 0.42, radius: zone.radius });
+        for (const entity of this.entities) {
+          if (!entity.alive || entity.id === zone.ownerId) continue;
+          if (Math.hypot(entity.x - zone.x, entity.y - zone.y) <= zone.radius + (entity.hitRadius || entity.radius)) {
+            this.damageEntity(entity, zone.damage, owner || null);
+          }
+        }
+      }
+    }
+    this.catPounceZones = this.catPounceZones.filter((zone) => zone.life > 0);
   }
 
   findNearestProjectileTarget(projectile) {
@@ -2092,6 +2169,22 @@ export class GameScene {
       ctx.beginPath();
       ctx.arc(player.x + vx * range, player.y + vy * range, 96, 0, Math.PI * 2);
       ctx.fill();
+    } else if (id === 'ain_haru_butler') {
+      const aimPower = Math.max(0.28, Math.min(1, this.ultimateVector.power || 1));
+      const range = 410 * aimPower;
+      const x = player.x + vx * range;
+      const y = player.y + vy * range;
+      ctx.globalAlpha = 0.46;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.24;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x, y, 96, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
   }
@@ -2123,7 +2216,7 @@ export class GameScene {
       ctx.restore();
       return;
     }
-    if (profile.type === 'thrust') {
+    if (profile.type === 'thrust' || profile.type === 'shortThrust') {
       ctx.globalAlpha = 0.24;
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = profile.width || 28;
@@ -2338,6 +2431,12 @@ export class GameScene {
         left: { x: 450, y: 430, width: 285, height: 470 },
         right: { x: 810, y: 430, width: 285, height: 470 },
         back: { x: 1190, y: 430, width: 300, height: 470 }
+      },
+      ain_haru_butler: {
+        front: { x: 45, y: 430, width: 370, height: 500 },
+        left: { x: 450, y: 430, width: 300, height: 500 },
+        right: { x: 805, y: 430, width: 310, height: 500 },
+        back: { x: 1190, y: 430, width: 315, height: 500 }
       }
     };
     const crops = spriteCrops[id];
@@ -2495,11 +2594,18 @@ export class GameScene {
     ctx.shadowColor = projectile.color;
     ctx.shadowBlur = projectile.type === 'sniper' ? 18 : 10;
     ctx.beginPath();
-    if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle') {
+    if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'catBall') {
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
       ctx.beginPath();
-      if (projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle') {
+      if (projectile.type === 'catBall') {
+        ctx.fillStyle = '#ffd6e8';
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ff7fb8';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      } else if (projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle') {
         ctx.fillStyle = projectile.type === 'charmBottle' ? '#c078ff' : '#63d7ff';
         ctx.fillRect(-14, -5, 24, 10);
         ctx.fillStyle = '#f8fbff';
@@ -2532,7 +2638,7 @@ export class GameScene {
     ctx.globalAlpha = t;
     ctx.strokeStyle = effect.color;
     ctx.fillStyle = effect.color;
-    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'paintCone' || effect.type === 'thrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch') {
+    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'paintCone' || effect.type === 'thrust' || effect.type === 'shortThrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch') {
       if (effect.type === 'clap' || effect.type === 'paintCone') {
         const angle = Math.atan2(effect.dy, effect.dx);
         const half = (effect.arcAngle || Math.PI * 0.58) / 2;
@@ -2548,12 +2654,40 @@ export class GameScene {
         ctx.arc(effect.x, effect.y, effect.range, angle - half, angle + half);
         ctx.stroke();
       } else {
-        ctx.lineWidth = effect.type === 'thrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch' ? (effect.width || 28) : (effect.type === 'bat' ? 22 : 16);
+        ctx.lineWidth = effect.type === 'thrust' || effect.type === 'shortThrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch' ? (effect.width || 28) : (effect.type === 'bat' ? 22 : 16);
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(effect.x + effect.dx * 28, effect.y + effect.dy * 28);
         ctx.lineTo(effect.x + effect.dx * effect.range, effect.y + effect.dy * effect.range);
         ctx.stroke();
+      }
+    } else if (effect.type === 'catWarning') {
+      ctx.globalAlpha = t * 0.42;
+      ctx.fillStyle = 'rgba(255, 214, 232, .36)';
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, effect.radius || 96, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = t * 0.9;
+      ctx.strokeStyle = '#ffd6e8';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([12, 9]);
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, (effect.radius || 96) * (1.03 - t * 0.03), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (effect.type === 'catPounce') {
+      ctx.globalAlpha = t;
+      ctx.strokeStyle = '#ffd6e8';
+      ctx.lineWidth = 9 * (1.1 - t);
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, (effect.radius || 96) * (1.05 - t * 0.1), 0, Math.PI * 2);
+      ctx.stroke();
+      if (this.catPounceImage) {
+        const width = 112;
+        const height = 168;
+        const rise = (1 - t) * 28;
+        ctx.globalAlpha = Math.min(1, t + 0.25);
+        ctx.drawImage(this.catPounceImage, effect.x - width / 2, effect.y - height + 26 - rise, width, height);
       }
     } else if (effect.type === 'ultimate-ring') {
       ctx.globalAlpha = t * 0.72;
