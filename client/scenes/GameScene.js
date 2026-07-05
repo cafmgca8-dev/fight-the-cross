@@ -26,6 +26,7 @@ export class GameScene {
     this.processedCharacterSprites = {};
     this.fireZones = [];
     this.fireImage = null;
+    this.fireCrackleTimer = 0;
     this.storm = null;
   }
 
@@ -156,6 +157,7 @@ export class GameScene {
     this.projectiles = [];
     this.effects = [];
     this.fireZones = [];
+    this.fireCrackleTimer = 0;
     this.startedAt = performance.now();
     this.setupStorm();
     this.finished = false;
@@ -807,7 +809,13 @@ export class GameScene {
     }
 
     if (profile.type === 'rocket') {
-      this.playAttackProximitySound(owner, ['hyoseong_gundam'], '/assets/audio/sniper-fire.wav', { selfVolume: 0.7, maxVolume: 0.62, minVolume: 0.16, range: 720 });
+      const rocketSound = this.playAttackProximitySound(owner, ['hyoseong_gundam'], '/assets/audio/hyoseong-gundam-missile-fly.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.18, range: 760 });
+      if (rocketSound) {
+        window.setTimeout(() => {
+          rocketSound.pause();
+          rocketSound.currentTime = 0;
+        }, 1150);
+      }
       this.fireProjectile(owner, nx, ny, profile, 0, 0);
       this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.2, maxLife: 0.2, radius: 28 });
       return;
@@ -1123,8 +1131,11 @@ export class GameScene {
   updateFireZones(delta) {
     if (this.finished) return;
     const now = performance.now();
+    const listener = this.getControlledEntity();
+    let closestFireDistance = Infinity;
     for (const zone of this.fireZones) {
       zone.life -= delta;
+      if (listener) closestFireDistance = Math.min(closestFireDistance, Math.hypot(listener.x - zone.x, listener.y - zone.y));
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === zone.ownerId) continue;
         if (this.isMultiplayer && !entity.controlled) continue;
@@ -1135,6 +1146,7 @@ export class GameScene {
       }
     }
     this.fireZones = this.fireZones.filter((zone) => zone.life > 0);
+    this.updateFireCrackleSound(delta, closestFireDistance);
     for (const entity of this.entities) {
       if (!entity.alive || now >= (entity.burnUntil || 0)) continue;
       if (this.isMultiplayer && !entity.controlled) continue;
@@ -1143,6 +1155,22 @@ export class GameScene {
       entity.burnTickTimer = 0.5;
       this.damageBurnEntity(entity, (entity.burnDps || 105) * 0.5);
     }
+  }
+
+  updateFireCrackleSound(delta, closestDistance) {
+    this.fireCrackleTimer -= delta;
+    if (this.fireCrackleTimer > 0 || !Number.isFinite(closestDistance)) return;
+    const audibleRange = 310;
+    if (closestDistance > audibleRange) return;
+    const volume = Math.max(0.12, 0.5 * (1 - closestDistance / audibleRange));
+    const sound = this.game.audio.playEffect('/assets/audio/fire-crackle.wav', { volume });
+    if (sound) {
+      window.setTimeout(() => {
+        sound.pause();
+        sound.currentTime = 0;
+      }, 980);
+    }
+    this.fireCrackleTimer = 1.05;
   }
 
   damageBurnEntity(entity, amount) {
