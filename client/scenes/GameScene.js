@@ -897,7 +897,10 @@ export class GameScene {
     entity.hp = Math.max(0, entity.hp - Math.round(amount * damageMultiplier));
     if (entity.controlled) this.game.audio.playEffect('/assets/audio/hit-impact.wav', { volume: 0.78 });
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
-    if (source && source.id !== entity.id && source.alive) this.addUltimateHit(source);
+    if (source && source.id !== entity.id && source.alive && this.addUltimateHit(source) && source.controlled && this.isMultiplayer) {
+      this.stateSendTimer = 0;
+      this.broadcastState(1);
+    }
     if (entity.hp <= 0) this.turnIntoGhost(entity);
     if (entity.controlled && this.isMultiplayer) {
       this.stateSendTimer = 0;
@@ -1002,10 +1005,11 @@ export class GameScene {
   }
 
   addUltimateHit(entity) {
-    if (!['ain', 'jaejun', 'seojun', 'kiseong', 'hyoseong', 'jaejun_cowboy', 'ain_hwang_general'].includes(entity?.character?.id)) return;
-    if (entity.ultimateReady) return;
+    if (!entity?.character?.id) return false;
+    if (entity.ultimateReady) return false;
     entity.ultimateHits = Math.min(3, (entity.ultimateHits || 0) + 1);
     if (entity.ultimateHits >= 3) entity.ultimateReady = true;
+    return true;
   }
 
   isStunned(entity) {
