@@ -1458,15 +1458,28 @@ export class GameScene {
     const barHeight = 14;
     const barX = entity.x - barWidth / 2;
     const barY = spriteMetrics ? entity.y - spriteMetrics.height - 17 : entity.y - 31;
-    const hpRatio = Math.max(0, entity.hp / entity.maxHp);
+    const hpRatio = Math.max(0, Math.min(1, entity.hp / entity.maxHp));
     ctx.fillStyle = 'rgba(0,0,0,.58)';
     ctx.fillRect(barX, barY, barWidth, barHeight);
     ctx.fillStyle = hpRatio > 0.35 ? '#36d6a5' : '#ff5f6d';
     ctx.fillRect(barX, barY, barWidth * hpRatio, barHeight);
+    const baseHp = Math.max(1, entity.character?.hp || entity.maxHp);
+    const maxHpLines = Math.min(8, Math.floor((entity.maxHp - 1) / baseHp));
+    if (maxHpLines > 0) {
+      ctx.strokeStyle = 'rgba(0,0,0,.86)';
+      ctx.lineWidth = 2;
+      for (let i = 1; i <= maxHpLines; i += 1) {
+        const markerX = barX + barWidth * Math.min(0.98, (baseHp * i) / entity.maxHp);
+        ctx.beginPath();
+        ctx.moveTo(markerX, barY + 1);
+        ctx.lineTo(markerX, barY + barHeight - 1);
+        ctx.stroke();
+      }
+    }
     ctx.strokeStyle = 'rgba(255,255,255,.88)';
     ctx.lineWidth = 2;
     ctx.strokeRect(barX, barY, barWidth, barHeight);
-    ctx.font = '800 10px system-ui';
+    ctx.font = '800 9px system-ui';
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = 'rgba(0,0,0,.7)';
     ctx.lineWidth = 3;
