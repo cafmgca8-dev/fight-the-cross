@@ -197,12 +197,12 @@
   },
   {
     "id": "seojun_boxer",
-    "name": "??-??",
+    "name": "서준-복서",
     "rarity": "Rare",
     "hp": 4200,
     "maxLevel": 10,
     "basicAttack": {
-      "name": "?? ??",
+      "name": "복서 펀치",
       "damage": 820,
       "effects": [
         {
@@ -213,8 +213,8 @@
       ]
     },
     "ultimate": {
-      "name": "?? ???",
-      "description": "??? ???? ??? ?? ?? ??? ??? ??? ???.",
+      "name": "점핑 피니시",
+      "description": "조준한 방향으로 날아가 착지 지점 근처의 적에게 피해를 줍니다.",
       "damage": 1450,
       "effects": [
         {
