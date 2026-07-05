@@ -1538,6 +1538,42 @@ body:not(.viewport-activated) #app {
   }
 }
 
+@media (max-width: 760px) {
+  .box-screen {
+    padding-bottom: 48px;
+  }
+
+  .box-screen #openGuaranteedBox {
+    position: fixed;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 120;
+    width: auto;
+    height: 42px;
+    min-height: 0;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.05;
+    box-shadow: 0 12px 28px rgba(45, 132, 255, .42);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .box-screen {
+    padding-bottom: 0;
+  }
+
+  .box-screen #openGuaranteedBox {
+    left: auto;
+    right: max(6px, env(safe-area-inset-right));
+    bottom: calc(max(6px, env(safe-area-inset-bottom)) + 30px);
+    width: 176px;
+    height: 34px;
+    font-size: 11px;
+  }
+}
+
 /* Polished box screen */
 .box-panel {
   position: relative;
