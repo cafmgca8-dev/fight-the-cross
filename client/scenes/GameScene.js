@@ -89,8 +89,9 @@ export class GameScene {
       this.loadImage('/assets/characters/jaejun-bartender-left.png').catch(() => null),
       this.loadImage('/assets/characters/jaejun-bartender-right.png').catch(() => null),
       this.loadImage('/assets/characters/jaejun-bartender-back.png').catch(() => null),
+      this.loadImage('/assets/characters/ain-artcat-reference.png').catch(() => null),
       this.loadImage('/assets/effects/fire-particle.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, fireImage]) => {
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, fireImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
@@ -131,6 +132,7 @@ export class GameScene {
           back: jaejunBartenderBack
         };
       }
+      if (ainArtcatSprite) this.setupCharacterSprite('ain_artcat', ainArtcatSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -192,6 +194,7 @@ export class GameScene {
       ghostSpeed: 310,
       alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0,
       ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, damageReductionUntil: 0, damageTakenMultiplier: 1, waterSlowUntil: 0,
+      artcatSlowStacks: 0, artcatSlowUntil: 0, artcatMarks: {},
       lastCombatAt: performance.now(), regenTickTimer: 0
     };
   }
@@ -630,6 +633,7 @@ export class GameScene {
   update(delta) {
     this.attackCooldown = Math.max(0, this.attackCooldown - delta);
     this.updateCharmedEntities(delta);
+    this.updateSummons(delta);
     this.updatePlayer(delta);
     this.updateSpecialZones(delta);
     this.updateStorm(delta);
@@ -707,7 +711,9 @@ export class GameScene {
     const terrainSlow = this.getTerrainSpeedMultiplier(nextX, nextY);
     const statusSlow = performance.now() < (entity.waterSlowUntil || 0) ? (this.map.waterSpeedMultiplier || 0.38) : 1;
     const alcoholSlow = performance.now() < (entity.alcoholSlowUntil || 0) ? (entity.alcoholSlowMultiplier || 0.45) : 1;
-    const slow = Math.min(terrainSlow, statusSlow, alcoholSlow);
+    const artcatSlow = performance.now() < (entity.artcatSlowUntil || 0) ? Math.max(0.35, 1 - (entity.artcatSlowStacks || 0) * 0.05) : 1;
+    if (artcatSlow >= 1) entity.artcatSlowStacks = 0;
+    const slow = Math.min(terrainSlow, statusSlow, alcoholSlow, artcatSlow);
     const boost = performance.now() < (entity.speedBoostUntil || 0) ? (entity.speedBoostMultiplier || 3) : 1;
     entity.x += nx * entity.speed * boost * slow * delta;
     entity.y += ny * entity.speed * boost * slow * delta;
@@ -723,6 +729,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
+    if (id === 'ain_artcat') return { type: 'paintCone', cooldown: 0.18, reloadTime: 1.36, range: 150, arcAngle: Math.PI * 0.46, color: '#ff6fcf', damageScale: 1.0, slowPerHit: 0.05, slowResetMs: 2000 };
     if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
     if (id === 'seojun_boxer') return { type: 'boxerPunch', cooldown: 0.18, reloadTime: 1.24, range: 112, width: 28, color: '#ff6b5f', damageScale: 1.0, knockback: 36 };
     if (id === 'hyoseong_gundam') return { type: 'rocket', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 620, width: 9, hitRadius: 24, color: '#ff7a2f', damageScale: 1.0, fireRadius: 76, fireDuration: 3.0, burnDuration: 4.0, burnDps: 115 };
@@ -808,8 +815,10 @@ export class GameScene {
       return;
     }
 
-    if (profile.type === 'clap') {
-      this.playAttackProximitySound(owner, ['kiseong'], '/assets/audio/kiseong-slap.wav', { selfVolume: 0.74, maxVolume: 0.64, minVolume: 0.17, range: 580 });
+    if (profile.type === 'clap' || profile.type === 'paintCone') {
+      const soundIds = profile.type === 'paintCone' ? ['ain_artcat'] : ['kiseong'];
+      const sound = profile.type === 'paintCone' ? '/assets/audio/hyoseong-whip-cut.wav' : '/assets/audio/kiseong-slap.wav';
+      this.playAttackProximitySound(owner, soundIds, sound, { selfVolume: 0.74, maxVolume: 0.64, minVolume: 0.17, range: 580 });
       this.meleeAttack(owner, nx, ny, profile);
       return;
     }
@@ -884,7 +893,7 @@ export class GameScene {
 
   meleeAttack(owner, nx, ny, profile) {
     this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.18, maxLife: 0.18, range: profile.range, width: profile.width, arcAngle: profile.arcAngle });
-    if (profile.type === 'clap') {
+    if (profile.type === 'clap' || profile.type === 'paintCone') {
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
         if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
@@ -896,6 +905,7 @@ export class GameScene {
         const angle = Math.acos(Math.max(-1, Math.min(1, dot)));
         if (angle <= (profile.arcAngle || Math.PI * 0.55) / 2) {
           this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
+          if (profile.type === 'paintCone') this.applyArtcatPaintHit(owner, entity, profile);
         }
       }
       return;
@@ -1062,7 +1072,7 @@ export class GameScene {
     this.markCombat(entity);
     if (entity.controlled) this.game.audio.playEffect('/assets/audio/hit-impact.wav', { volume: 0.78 });
     this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#fff', life: 0.16, maxLife: 0.16, radius: 26 });
-    if (source && source.id !== entity.id && source.alive && this.addUltimateHit(source) && source.controlled && this.isMultiplayer) {
+    if (source && !source.isSummon && source.id !== entity.id && source.alive && this.addUltimateHit(source) && source.controlled && this.isMultiplayer) {
       this.stateSendTimer = 0;
       this.broadcastState(1);
     }
@@ -1109,7 +1119,7 @@ export class GameScene {
 
   updateSpecialZones(delta) {
     if (this.finished) return;
-    const targets = this.entities.filter((entity) => entity.alive && (entity.controlled || !this.isMultiplayer));
+    const targets = this.entities.filter((entity) => entity.alive && (entity.controlled || entity.isSummon || !this.isMultiplayer));
     for (const entity of targets) {
       if (this.isHealPadAt(entity.x, entity.y, entity.radius || 0) && !this.isInStorm(entity)) {
         if (entity.hp < entity.maxHp) entity.hp = entity.maxHp;
@@ -1151,7 +1161,7 @@ export class GameScene {
     this.storm.timer -= delta;
     if (this.storm.timer > 0) return;
     this.storm.timer = this.storm.tick;
-    const targets = this.entities.filter((entity) => entity.alive && (entity.controlled || !this.isMultiplayer));
+    const targets = this.entities.filter((entity) => entity.alive && (entity.controlled || entity.isSummon || !this.isMultiplayer));
     for (const entity of targets) {
       const distance = Math.hypot(entity.x - this.storm.centerX, entity.y - this.storm.centerY);
       if (distance <= state.radius + (entity.radius || 0)) continue;
@@ -1195,7 +1205,7 @@ export class GameScene {
       if (listener) closestFireDistance = Math.min(closestFireDistance, Math.hypot(listener.x - zone.x, listener.y - zone.y));
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === zone.ownerId) continue;
-        if (this.isMultiplayer && !entity.controlled) continue;
+        if (this.isMultiplayer && !entity.controlled && !entity.isSummon) continue;
         if (Math.hypot(entity.x - zone.x, entity.y - zone.y) <= zone.radius + (entity.radius || 0)) {
           entity.burnUntil = Math.max(entity.burnUntil || 0, now + zone.burnDuration * 1000);
           entity.burnDps = Math.max(entity.burnDps || 0, zone.burnDps);
@@ -1206,7 +1216,7 @@ export class GameScene {
     this.updateFireCrackleSound(delta, closestFireDistance);
     for (const entity of this.entities) {
       if (!entity.alive || now >= (entity.burnUntil || 0)) continue;
-      if (this.isMultiplayer && !entity.controlled) continue;
+      if (this.isMultiplayer && !entity.controlled && !entity.isSummon) continue;
       entity.burnTickTimer = (entity.burnTickTimer || 0) - delta;
       if (entity.burnTickTimer > 0) continue;
       entity.burnTickTimer = 0.5;
@@ -1272,7 +1282,7 @@ export class GameScene {
             zone.chargedIds.add(entity.id);
             this.addUltimateHit(owner);
           }
-          if (this.isMultiplayer && !entity.controlled) continue;
+          if (this.isMultiplayer && !entity.controlled && !entity.isSummon) continue;
           entity.alcoholSlowUntil = Math.max(entity.alcoholSlowUntil || 0, now + zone.slowDuration * 1000);
           entity.alcoholSlowMultiplier = Math.min(entity.alcoholSlowMultiplier || 1, zone.slowMultiplier);
           entity.alcoholDps = Math.max(entity.alcoholDps || 0, zone.dps);
@@ -1283,7 +1293,7 @@ export class GameScene {
     this.alcoholZones = this.alcoholZones.filter((zone) => zone.life > 0);
     for (const entity of this.entities) {
       if (!entity.alive || now >= (entity.alcoholDamageUntil || 0)) continue;
-      if (this.isMultiplayer && !entity.controlled) continue;
+      if (this.isMultiplayer && !entity.controlled && !entity.isSummon) continue;
       entity.alcoholTickTimer = (entity.alcoholTickTimer || 0) - delta;
       if (entity.alcoholTickTimer > 0) continue;
       entity.alcoholTickTimer = 0.5;
@@ -1334,6 +1344,7 @@ export class GameScene {
 
   addUltimateHit(entity) {
     if (!entity?.character?.id) return false;
+    if (entity.isSummon) return false;
     if (entity.ultimateReady) return false;
     entity.ultimateHits = Math.min(3, (entity.ultimateHits || 0) + 1);
     if (entity.ultimateHits >= 3) entity.ultimateReady = true;
@@ -1381,6 +1392,85 @@ export class GameScene {
     }
   }
 
+  applyArtcatPaintHit(owner, entity, profile) {
+    if (!owner?.alive || !entity?.alive || entity.id === owner.id) return;
+    if (performance.now() >= (entity.artcatSlowUntil || 0)) entity.artcatSlowStacks = 0;
+    entity.artcatSlowStacks = Math.min(10, (entity.artcatSlowStacks || 0) + 1);
+    entity.artcatSlowUntil = performance.now() + (profile.slowResetMs || 2000);
+    owner.artcatMarks = owner.artcatMarks || {};
+    const mark = owner.artcatMarks[entity.id] || { hits: 0, characterId: entity.character?.id };
+    mark.hits += 1;
+    mark.characterId = entity.character?.id;
+    mark.entityId = entity.id;
+    mark.expiresAt = performance.now() + 8000;
+    owner.artcatMarks[entity.id] = mark;
+    this.effects.push({ type: 'slow', x: entity.x, y: entity.y, color: '#ff6fcf', life: 0.35, maxLife: 0.35, radius: 24 + entity.artcatSlowStacks * 2 });
+  }
+
+  updateSummons(delta) {
+    const summons = this.entities.filter((entity) => entity.isSummon && entity.alive && !this.isControlBlocked(entity));
+    for (const summon of summons) {
+      const targets = this.entities
+        .filter((entity) => entity.alive && !entity.isSummon && entity.id !== summon.summonerId)
+        .sort((a, b) => this.distance(summon, a) - this.distance(summon, b));
+      const target = targets[0];
+      if (!target) continue;
+      const dx = target.x - summon.x;
+      const dy = target.y - summon.y;
+      const distance = Math.hypot(dx, dy) || 1;
+      const nx = dx / distance;
+      const ny = dy / distance;
+      const profile = this.getAttackProfile(summon);
+      const preferred = Math.max(90, (profile.range || 120) * 0.82);
+      if (distance > preferred) this.moveEntity(summon, nx, ny, delta);
+      else this.moveEntity(summon, -ny * 0.35, nx * 0.35, delta);
+      summon.attackTimer -= delta;
+      if (distance <= (profile.range || 120) + 70 && summon.attackTimer <= 0) {
+        this.performAttack(summon, nx, ny, true);
+        summon.attackTimer = 0.7;
+      }
+    }
+  }
+
+  summonArtcatClone(owner) {
+    const now = performance.now();
+    const marks = Object.values(owner.artcatMarks || {})
+      .filter((mark) => mark.hits >= 2 && (!mark.expiresAt || mark.expiresAt > now));
+    marks.sort((a, b) => b.hits - a.hits);
+    const mark = marks[0];
+    if (!mark) {
+      this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ff6fcf', life: 0.35, maxLife: 0.35, radius: 72 });
+      return;
+    }
+    const target = this.entities.find((entity) => entity.id === mark.entityId);
+    if (!target?.character) return;
+    const angle = Math.atan2(target.y - owner.y, target.x - owner.x) || 0;
+    const clone = this.createEntity('artcat_clone_' + owner.id + '_' + Math.floor(now), target.name + ' 분신', target.character, {
+      x: target.x - Math.cos(angle) * 46,
+      y: target.y - Math.sin(angle) * 46
+    }, false);
+    clone.isSummon = true;
+    clone.summonerId = owner.id;
+    clone.controlled = false;
+    clone.hp = 2000;
+    clone.maxHp = 2000;
+    clone.speed = 220;
+    clone.color = '#ff6fcf';
+    clone.name = target.character.name + ' 분신';
+    clone.damage = target.character.basicAttack?.damage || clone.damage;
+    clone.artcatMarks = {};
+    clone.ultimateHits = 0;
+    clone.ultimateReady = false;
+    this.game.mapManager.clampToArena(this.map, clone);
+    if (this.isWallAt(clone.x, clone.y, clone.radius)) {
+      clone.x = owner.x + Math.cos(angle) * 42;
+      clone.y = owner.y + Math.sin(angle) * 42;
+    }
+    this.entities.push(clone);
+    delete owner.artcatMarks[mark.entityId];
+    this.effects.push({ type: 'ultimate-ring', x: clone.x, y: clone.y, color: '#ff6fcf', life: 0.75, maxLife: 0.75, radius: 90 });
+  }
+
   performUltimate(owner, dirX, dirY, fromNetwork = false, power = 1) {
     if (!owner?.alive || this.isControlBlocked(owner)) return;
     if (!owner.ultimateReady && !fromNetwork) return;
@@ -1406,6 +1496,7 @@ export class GameScene {
     else if (id === 'seojun_boxer') this.castSeojunBoxerUltimate(owner, nx, ny, power);
     else if (id === 'hyoseong_gundam') this.castHyoseongGundamUltimate(owner, nx, ny);
     else if (id === 'jaejun_bartender') this.castJaejunBartenderUltimate(owner, nx, ny, power);
+    else if (id === 'ain_artcat') this.summonArtcatClone(owner);
   }
 
   castAinUltimate(owner) {
@@ -1767,7 +1858,7 @@ export class GameScene {
   }
 
   updateHud() {
-    const alive = this.entities.filter((entity) => entity.alive).length;
+    const alive = this.entities.filter((entity) => entity.alive && !entity.isSummon).length;
     const stormState = this.getStormState();
     const stormLabel = stormState.progress <= 0 ? '자기장 대기' : '자기장 ' + Math.round(stormState.progress * 100) + '%';
     this.aliveCount.textContent = alive + '명 생존';
@@ -1788,7 +1879,7 @@ export class GameScene {
   }
 
   checkWinner() {
-    const alive = this.entities.filter((entity) => entity.alive);
+    const alive = this.entities.filter((entity) => entity.alive && !entity.isSummon);
     if (alive.length > 1 || this.finished) return;
     this.finished = true;
     const winner = alive[0];
@@ -2011,7 +2102,7 @@ export class GameScene {
     const profile = this.getAttackProfile(player);
     const range = profile.range;
     ctx.save();
-    if (profile.type === 'clap') {
+    if (profile.type === 'clap' || profile.type === 'paintCone') {
       const angle = Math.atan2(this.attackVector.y, this.attackVector.x);
       const half = (profile.arcAngle || Math.PI * 0.58) / 2;
       ctx.globalAlpha = 0.24;
@@ -2241,6 +2332,12 @@ export class GameScene {
         left: { x: 650, y: 330, width: 300, height: 430, darkBackground: true },
         right: { x: 940, y: 330, width: 300, height: 430, darkBackground: true },
         back: { x: 1240, y: 330, width: 315, height: 430, darkBackground: true }
+      },
+      ain_artcat: {
+        front: { x: 55, y: 435, width: 365, height: 465 },
+        left: { x: 450, y: 430, width: 285, height: 470 },
+        right: { x: 810, y: 430, width: 285, height: 470 },
+        back: { x: 1190, y: 430, width: 300, height: 470 }
       }
     };
     const crops = spriteCrops[id];
@@ -2435,8 +2532,8 @@ export class GameScene {
     ctx.globalAlpha = t;
     ctx.strokeStyle = effect.color;
     ctx.fillStyle = effect.color;
-    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'thrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch') {
-      if (effect.type === 'clap') {
+    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'paintCone' || effect.type === 'thrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch') {
+      if (effect.type === 'clap' || effect.type === 'paintCone') {
         const angle = Math.atan2(effect.dy, effect.dx);
         const half = (effect.arcAngle || Math.PI * 0.58) / 2;
         ctx.globalAlpha = t * 0.36;

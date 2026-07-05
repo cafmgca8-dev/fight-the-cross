@@ -287,5 +287,37 @@
         }
       ]
     }
+  },
+  {
+    "id": "ain_artcat",
+    "name": "\uc544\uc778-\uc544\ud2b8\ucea3",
+    "rarity": "Legendary",
+    "hp": 4600,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "\ud398\uc778\ud2b8 \ud718\ub450\ub974\uae30",
+      "damage": 780,
+      "effects": [
+        {
+          "type": "paintCone",
+          "range": 150,
+          "angle": 60,
+          "slowPerHit": 0.05,
+          "resetMs": 2000
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "\uadf8\ub9bc\uc790 \ubd84\uc2e0",
+      "description": "\uae30\ubcf8\uacf5\uaca9\uc73c\ub85c \ub450 \ubc88 \uc774\uc0c1 \ub9de\ud78c \uc801\uc758 \ubd84\uc2e0\uc744 \uc18c\ud658\ud569\ub2c8\ub2e4. \ubd84\uc2e0\uc740 HP 2000\uc73c\ub85c \uace0\uc815\ub418\uace0 \uae30\ubcf8\uacf5\uaca9\ub9cc \uc0ac\uc6a9\ud569\ub2c8\ub2e4.",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "summonClone",
+          "requiredHits": 2,
+          "cloneHp": 2000
+        }
+      ]
+    }
   }
 ]
