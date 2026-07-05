@@ -1568,6 +1568,13 @@ body:not(.viewport-activated) #app {
   background: linear-gradient(180deg, #ffe06b, #ff9f2f);
 }
 
+.box-actions .character-box-btn {
+  grid-column: 1 / -1;
+  color: #f7fbff;
+  background: linear-gradient(180deg, #51d7ff, #2467ff);
+  box-shadow: 0 10px 26px rgba(45, 132, 255, .34);
+}
+
 @keyframes boxPreviewFloat {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-6px) scale(1.02); }

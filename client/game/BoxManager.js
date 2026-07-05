@@ -39,6 +39,29 @@ export class BoxManager {
     return { save: nextSave, reward, message: this.describeReward(reward) };
   }
 
+  openGuaranteedCharacter(save, cost = 500) {
+    if ((save.coins || 0) < cost) {
+      return { save, reward: null, message: cost + '골드가 필요합니다.' };
+    }
+
+    const candidates = this.getCharacterCandidates(save, { type: 'character', onlyLocked: true });
+    if (candidates.length <= 0) {
+      return { save, reward: null, message: '획득 가능한 새 캐릭터가 없습니다.' };
+    }
+
+    const character = candidates[this.randomInt(0, candidates.length - 1)];
+    const nextSave = {
+      ...save,
+      coins: save.coins - cost,
+      characters: {
+        ...save.characters,
+        [character.id]: { level: 1, unlockedAt: Date.now() }
+      }
+    };
+    const reward = { type: 'character', characterId: character.id, name: character.name, guaranteed: true, cost };
+    return { save: nextSave, reward, message: this.describeReward(reward) };
+  }
+
   getCharacterCandidates(save, drop) {
     return this.characterManager.getAll().filter((character) => {
       const rarityMatches = !drop.rarity || character.rarity === drop.rarity;

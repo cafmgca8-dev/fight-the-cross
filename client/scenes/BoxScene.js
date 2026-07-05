@@ -3,6 +3,7 @@ export class BoxScene {
     this.game = game;
     this.revealOverlay = null;
     this.isRevealing = false;
+    this.revealType = null;
   }
 
   render() {
@@ -18,7 +19,7 @@ export class BoxScene {
       '<div class="stat"><span>코인</span><strong id="coinCount">' + this.game.save.coins + '</strong></div>' +
       '</div>' +
       '<div class="box-preview"><div class="box-preview-aura"></div><img src="/assets/ui/box-closed.png" alt="상자"></div>' +
-      '<div class="button-grid"><button id="claimVictory" class="btn">승리 보상 테스트</button><button id="openBox" class="btn warning">상자 열기</button></div>' +
+      '<div class="button-grid box-actions"><button id="claimVictory" class="btn">승리 보상 테스트</button><button id="openBox" class="btn warning">상자 열기</button><button id="openGuaranteedBox" class="btn character-box-btn">500골드 확정 캐릭터</button></div>' +
       '</section>' +
       '<section class="message-log">' + this.game.message + '</section>' +
       '</main>');
@@ -28,22 +29,35 @@ export class BoxScene {
     });
     document.querySelector('#openBox').addEventListener('click', () => this.startReveal());
     document.querySelector('#claimVictory').addEventListener('click', () => this.game.recordVictory());
+    document.querySelector('#openGuaranteedBox').addEventListener('click', () => this.startReveal('guaranteed_character'));
   }
 
-  startReveal() {
+  startReveal(type = 'basic') {
     if (this.isRevealing) return;
-    if (this.game.save.boxes <= 0) {
+    if (type === 'basic' && this.game.save.boxes <= 0) {
       this.game.message = '열 수 있는 상자가 없습니다.';
+      this.game.refresh();
+      return;
+    }
+    if (type === 'guaranteed_character' && this.game.save.coins < 500) {
+      this.game.message = '500골드가 필요합니다.';
+      this.game.refresh();
+      return;
+    }
+    if (type === 'guaranteed_character' && this.game.boxManager.getCharacterCandidates(this.game.save, { onlyLocked: true }).length <= 0) {
+      this.game.message = '획득 가능한 새 캐릭터가 없습니다.';
       this.game.refresh();
       return;
     }
 
     this.isRevealing = true;
+    this.revealType = type;
+    const closedImage = type === 'guaranteed_character' ? '/assets/ui/guaranteed-character-box-closed.png' : '/assets/ui/box-closed.png';
     const overlay = document.createElement('div');
     overlay.className = 'box-reveal-overlay is-ready';
     overlay.innerHTML =
       '<div class="box-reveal-stage">' +
-      '<img class="box-reveal-image" src="/assets/ui/box-closed.png" alt="닫힌 상자">' +
+      '<img class="box-reveal-image" src="' + closedImage + '" alt="상자">' +
       '<div class="box-reveal-hint">화면을 눌러 상자 열기</div>' +
       '</div>';
     document.body.appendChild(overlay);
@@ -57,12 +71,16 @@ export class BoxScene {
     const overlay = this.revealOverlay;
     const image = overlay.querySelector('.box-reveal-image');
     const hint = overlay.querySelector('.box-reveal-hint');
+    const type = this.revealType || 'basic';
+    const openImage = type === 'guaranteed_character' ? '/assets/ui/guaranteed-character-box-open.png' : '/assets/ui/box-open.png';
     overlay.classList.add('is-shaking');
     this.game.audio.playEffect('/assets/audio/box-shake-boing.wav', { volume: 0.78 });
     if (hint) hint.textContent = '상자 여는 중...';
 
     window.setTimeout(() => {
-      const result = this.game.boxManager.open(this.game.save);
+      const result = type === 'guaranteed_character'
+        ? this.game.boxManager.openGuaranteedCharacter(this.game.save, 500)
+        : this.game.boxManager.open(this.game.save);
       this.game.save = result.save;
       this.game.message = result.message;
       this.game.persist();
@@ -71,7 +89,7 @@ export class BoxScene {
       overlay.classList.remove('is-shaking');
       overlay.classList.add('is-open');
       if (image) {
-        image.src = '/assets/ui/box-open.png';
+        image.src = openImage;
         image.alt = '열린 상자';
       }
       if (hint) hint.remove();
@@ -184,5 +202,6 @@ export class BoxScene {
     this.revealOverlay?.remove();
     this.revealOverlay = null;
     this.isRevealing = false;
+    this.revealType = null;
   }
 }
