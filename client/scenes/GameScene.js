@@ -72,8 +72,12 @@ export class GameScene {
       this.loadImage('/assets/characters/ain-hwang-general-front.png').catch(() => null),
       this.loadImage('/assets/characters/ain-hwang-general-left.png').catch(() => null),
       this.loadImage('/assets/characters/ain-hwang-general-right.png').catch(() => null),
-      this.loadImage('/assets/characters/ain-hwang-general-back.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack]) => {
+      this.loadImage('/assets/characters/ain-hwang-general-back.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-boxer-front.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-boxer-left.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-boxer-right.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-boxer-back.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack]) => {
       this.mapImage = image;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
@@ -87,6 +91,14 @@ export class GameScene {
           left: ainHwangGeneralLeft,
           right: ainHwangGeneralRight,
           back: ainHwangGeneralBack
+        };
+      }
+      if (seojunBoxerFront || seojunBoxerLeft || seojunBoxerRight || seojunBoxerBack) {
+        this.processedCharacterSprites.seojun_boxer = {
+          front: seojunBoxerFront,
+          left: seojunBoxerLeft,
+          right: seojunBoxerRight,
+          back: seojunBoxerBack
         };
       }
       this.setMaskImage(maskImage);
@@ -661,6 +673,7 @@ export class GameScene {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
     if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
+    if (id === 'seojun_boxer') return { type: 'boxerPunch', cooldown: 0.18, reloadTime: 1.24, range: 112, width: 28, color: '#ff6b5f', damageScale: 1.0, knockback: 36 };
     if (id === 'jaejun_cowboy') return { type: 'pistolBurst', cooldown: 0.18, reloadTime: 1.45, range: 430, speed: 900, width: 5, hitRadius: 15, spread: 0.13, color: '#ffd66b', damageScale: 1.0 };
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'hyoseong') return { type: 'thrust', cooldown: 0.18, reloadTime: 1.3, range: 210, width: 28, color: '#75d8ff', damageScale: 1.0 };
@@ -724,6 +737,12 @@ export class GameScene {
       this.playAttackProximitySound(owner, ['ain_hwang_general'], '/assets/audio/ain-hwang-general-slash.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 640 });
       this.meleeAttack(owner, nx, ny, profile);
       this.dashEntity(owner, nx, ny, profile.dashDistance || profile.range);
+      return;
+    }
+
+    if (profile.type === 'boxerPunch') {
+      this.playAttackProximitySound(owner, ['seojun_boxer'], '/assets/audio/punch-swing.wav', { selfVolume: 0.72, maxVolume: 0.64, minVolume: 0.18, range: 580 });
+      this.meleeAttack(owner, nx, ny, profile);
       return;
     }
 
@@ -832,6 +851,19 @@ export class GameScene {
       }
       return;
     }
+    if (profile.type === 'boxerPunch') {
+      const hitX = owner.x + nx * profile.range;
+      const hitY = owner.y + ny * profile.range;
+      for (const entity of this.entities) {
+        if (!entity.alive || entity.id === owner.id) continue;
+        const distance = Math.hypot(entity.x - hitX, entity.y - hitY);
+        if (distance <= (entity.hitRadius || entity.radius) + profile.range * 0.48) {
+          this.damageEntity(entity, owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner), owner);
+          this.knockEntityBack(entity, nx, ny, profile.knockback || 32);
+        }
+      }
+      return;
+    }
     const hitX = owner.x + nx * profile.range;
     const hitY = owner.y + ny * profile.range;
     for (const entity of this.entities) {
@@ -863,6 +895,46 @@ export class GameScene {
         entity.x = oldX;
         entity.y = oldY;
         break;
+      }
+    }
+  }
+
+  knockEntityBack(entity, nx, ny, distance) {
+    const steps = Math.max(1, Math.ceil(distance / 8));
+    const stepDistance = distance / steps;
+    const collisionRadius = Math.max(8, (entity.radius || 18) * 0.62);
+    for (let i = 0; i < steps; i += 1) {
+      const oldX = entity.x;
+      const oldY = entity.y;
+      entity.x += nx * stepDistance;
+      entity.y += ny * stepDistance;
+      this.game.mapManager.clampToArena(this.map, entity);
+      const outsideArena = !this.game.mapManager.isInsideArena(this.map, entity.x, entity.y, collisionRadius);
+      const blockedByWall = this.isWallAt(entity.x, entity.y, collisionRadius);
+      if (outsideArena || blockedByWall) {
+        entity.x = oldX;
+        entity.y = oldY;
+        break;
+      }
+    }
+  }
+
+  leapEntity(entity, nx, ny, distance) {
+    const collisionRadius = Math.max(8, (entity.radius || 18) * 0.62);
+    const targetX = Math.max(0, Math.min(this.map.width, entity.x + nx * distance));
+    const targetY = Math.max(0, Math.min(this.map.height, entity.y + ny * distance));
+    for (let i = 0; i <= 18; i += 1) {
+      const ratio = 1 - i / 18;
+      const nextX = entity.x + (targetX - entity.x) * ratio;
+      const nextY = entity.y + (targetY - entity.y) * ratio;
+      if (
+        this.game.mapManager.isInsideArena(this.map, nextX, nextY, collisionRadius) &&
+        !this.isWallAt(nextX, nextY, collisionRadius)
+      ) {
+        entity.x = nextX;
+        entity.y = nextY;
+        this.game.mapManager.clampToArena(this.map, entity);
+        return;
       }
     }
   }
@@ -1037,6 +1109,7 @@ export class GameScene {
     else if (id === 'hyoseong') this.castHyoseongUltimate(owner);
     else if (id === 'jaejun_cowboy') this.castCowboyUltimate(owner);
     else if (id === 'ain_hwang_general') this.castAinHwangGeneralUltimate(owner);
+    else if (id === 'seojun_boxer') this.castSeojunBoxerUltimate(owner, nx, ny);
   }
 
   castAinUltimate(owner) {
@@ -1090,6 +1163,28 @@ export class GameScene {
     owner.damageTakenMultiplier = 0.7;
     owner.damageReductionUntil = Math.max(owner.damageReductionUntil || 0, performance.now() + duration);
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#f3d16a', life: 0.85, maxLife: 0.85, radius: 118 });
+  }
+
+  castSeojunBoxerUltimate(owner, nx, ny) {
+    this.playAttackProximitySound(owner, ['seojun_boxer'], '/assets/audio/punch-swing.wav', { selfVolume: 0.86, maxVolume: 0.76, minVolume: 0.18, range: 760 });
+    const range = 340;
+    const radius = 112;
+    const damage = 1450;
+    const startX = owner.x;
+    const startY = owner.y;
+    this.leapEntity(owner, nx, ny, range);
+    this.effects.push({ type: 'line', x: startX, y: startY, dx: nx, dy: ny, color: '#ff6b5f', life: 0.24, maxLife: 0.24, range: Math.hypot(owner.x - startX, owner.y - startY) });
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ff6b5f', life: 0.58, maxLife: 0.58, radius });
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === owner.id) continue;
+      const distance = Math.hypot(entity.x - owner.x, entity.y - owner.y);
+      if (distance <= radius + (entity.hitRadius || entity.radius)) {
+        this.damageEntity(entity, damage, owner);
+        const pushX = distance > 1 ? (entity.x - owner.x) / distance : nx;
+        const pushY = distance > 1 ? (entity.y - owner.y) / distance : ny;
+        this.knockEntityBack(entity, pushX, pushY, 42);
+      }
+    }
   }
 
   castCowboyUltimate(owner) {
@@ -1754,7 +1849,7 @@ export class GameScene {
     ctx.globalAlpha = t;
     ctx.strokeStyle = effect.color;
     ctx.fillStyle = effect.color;
-    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'thrust' || effect.type === 'slashDash') {
+    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'thrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch') {
       if (effect.type === 'clap') {
         const angle = Math.atan2(effect.dy, effect.dx);
         const half = (effect.arcAngle || Math.PI * 0.58) / 2;
@@ -1770,7 +1865,7 @@ export class GameScene {
         ctx.arc(effect.x, effect.y, effect.range, angle - half, angle + half);
         ctx.stroke();
       } else {
-        ctx.lineWidth = effect.type === 'thrust' || effect.type === 'slashDash' ? (effect.width || 28) : (effect.type === 'bat' ? 22 : 16);
+        ctx.lineWidth = effect.type === 'thrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch' ? (effect.width || 28) : (effect.type === 'bat' ? 22 : 16);
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(effect.x + effect.dx * 28, effect.y + effect.dy * 28);

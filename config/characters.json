@@ -194,5 +194,35 @@
         }
       ]
     }
+  },
+  {
+    "id": "seojun_boxer",
+    "name": "??-??",
+    "rarity": "Rare",
+    "hp": 4200,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "?? ??",
+      "damage": 820,
+      "effects": [
+        {
+          "type": "knockback",
+          "force": 36,
+          "range": 112
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "?? ???",
+      "description": "??? ???? ??? ?? ?? ??? ??? ??? ???.",
+      "damage": 1450,
+      "effects": [
+        {
+          "type": "targetLeapAreaDamage",
+          "range": 340,
+          "radius": 112
+        }
+      ]
+    }
   }
 ]
