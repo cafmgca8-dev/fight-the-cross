@@ -224,5 +224,36 @@
         }
       ]
     }
+  },
+  {
+    "id": "hyoseong_gundam",
+    "name": "\ud6a8\uc131-\uac74\ub2f4",
+    "rarity": "Hero",
+    "hp": 4800,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "\ub85c\ucf13 \ubc1c\uc0ac",
+      "damage": 980,
+      "effects": [
+        {
+          "type": "rocketBurn",
+          "range": 520,
+          "fireDuration": 3000,
+          "burnDuration": 4000
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "\ud3ed\uaca9 \ube44\ud589",
+      "description": "\uc804\ubc29\uc73c\ub85c \ub0a0\uc544\uac00\uba70 \uacbd\ub85c\uc5d0 \ud3ed\uaca9\uacfc \ubd88\ubc14\ub2e5\uc744 \ub0a8\uae41\ub2c8\ub2e4.",
+      "damage": 1850,
+      "effects": [
+        {
+          "type": "flightBombardment",
+          "range": 420,
+          "radius": 58
+        }
+      ]
+    }
   }
 ]

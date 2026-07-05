@@ -24,6 +24,8 @@ export class GameScene {
     this.camera = { x: 0, y: 0, width: 980, height: 552 };
     this.characterSprites = {};
     this.processedCharacterSprites = {};
+    this.fireZones = [];
+    this.fireImage = null;
     this.storm = null;
   }
 
@@ -76,9 +78,15 @@ export class GameScene {
       this.loadImage('/assets/characters/seojun-boxer-front.png').catch(() => null),
       this.loadImage('/assets/characters/seojun-boxer-left.png').catch(() => null),
       this.loadImage('/assets/characters/seojun-boxer-right.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-boxer-back.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack]) => {
+      this.loadImage('/assets/characters/seojun-boxer-back.png').catch(() => null),
+      this.loadImage('/assets/characters/hyoseong-gundam-front.png').catch(() => null),
+      this.loadImage('/assets/characters/hyoseong-gundam-left.png').catch(() => null),
+      this.loadImage('/assets/characters/hyoseong-gundam-right.png').catch(() => null),
+      this.loadImage('/assets/characters/hyoseong-gundam-back.png').catch(() => null),
+      this.loadImage('/assets/effects/fire-particle.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, fireImage]) => {
       this.mapImage = image;
+      this.fireImage = fireImage;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
       if (seojunSprite) this.setupCharacterSprite('seojun', seojunSprite);
@@ -99,6 +107,14 @@ export class GameScene {
           left: seojunBoxerLeft,
           right: seojunBoxerRight,
           back: seojunBoxerBack
+        };
+      }
+      if (hyoseongGundamFront || hyoseongGundamLeft || hyoseongGundamRight || hyoseongGundamBack) {
+        this.processedCharacterSprites.hyoseong_gundam = {
+          front: hyoseongGundamFront,
+          left: hyoseongGundamLeft,
+          right: hyoseongGundamRight,
+          back: hyoseongGundamBack
         };
       }
       this.setMaskImage(maskImage);
@@ -139,6 +155,7 @@ export class GameScene {
 
     this.projectiles = [];
     this.effects = [];
+    this.fireZones = [];
     this.startedAt = performance.now();
     this.setupStorm();
     this.finished = false;
@@ -303,7 +320,7 @@ export class GameScene {
       if (event.pointerId !== this.ultimatePointerId) return;
       const vector = { ...this.ultimateVector };
       reset();
-      this.performUltimate(this.getControlledEntity(), vector.x || 0, vector.y || -1);
+      this.performUltimate(this.getControlledEntity(), vector.x || 0, vector.y || -1, false, vector.power || 1);
     };
     this.ultimatePad.addEventListener('pointerdown', (event) => {
       event.preventDefault();
@@ -367,7 +384,7 @@ export class GameScene {
       if (!entity || entity.controlled || this.isStunned(entity)) return;
       entity.ultimateReady = true;
       entity.ultimateHits = 3;
-      this.performUltimate(entity, payload.dirX, payload.dirY, true);
+      this.performUltimate(entity, payload.dirX, payload.dirY, true, payload.power || 1);
     }));
   }
 
@@ -586,6 +603,7 @@ export class GameScene {
     this.updatePlayer(delta);
     this.updateSpecialZones(delta);
     this.updateStorm(delta);
+    this.updateFireZones(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
     this.updateAmmo(delta);
@@ -674,6 +692,7 @@ export class GameScene {
     const name = entity.character.basicAttack.name;
     if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
     if (id === 'seojun_boxer') return { type: 'boxerPunch', cooldown: 0.18, reloadTime: 1.24, range: 112, width: 28, color: '#ff6b5f', damageScale: 1.0, knockback: 36 };
+    if (id === 'hyoseong_gundam') return { type: 'rocket', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 620, width: 9, hitRadius: 24, color: '#ff7a2f', damageScale: 1.0, fireRadius: 76, fireDuration: 3.0, burnDuration: 4.0, burnDps: 115 };
     if (id === 'jaejun_cowboy') return { type: 'pistolBurst', cooldown: 0.18, reloadTime: 1.45, range: 430, speed: 900, width: 5, hitRadius: 15, spread: 0.13, color: '#ffd66b', damageScale: 1.0 };
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'hyoseong') return { type: 'thrust', cooldown: 0.18, reloadTime: 1.3, range: 210, width: 28, color: '#75d8ff', damageScale: 1.0 };
@@ -784,6 +803,13 @@ export class GameScene {
         this.fireProjectile(owner, shotX, shotY, profile, -ny * side * 7, nx * side * 7);
       });
       this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.16, maxLife: 0.16, radius: 24 });
+      return;
+    }
+
+    if (profile.type === 'rocket') {
+      this.playAttackProximitySound(owner, ['hyoseong_gundam'], '/assets/audio/sniper-fire.wav', { selfVolume: 0.7, maxVolume: 0.62, minVolume: 0.16, range: 720 });
+      this.fireProjectile(owner, nx, ny, profile, 0, 0);
+      this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.2, maxLife: 0.2, radius: 28 });
       return;
     }
 
@@ -955,7 +981,11 @@ export class GameScene {
       damage: owner.damage * profile.damageScale * this.getAttackPowerMultiplier(owner),
       life: Math.max(0.05, (profile.range - 28) / profile.speed),
       color: profile.color,
-      type: profile.type
+      type: profile.type,
+      fireRadius: profile.fireRadius || 0,
+      fireDuration: profile.fireDuration || 0,
+      burnDuration: profile.burnDuration || 0,
+      burnDps: profile.burnDps || 0
     });
   }
 
@@ -1076,6 +1106,57 @@ export class GameScene {
     }
   }
 
+  createFireZone(x, y, ownerId, radius = 76, duration = 3, options = {}) {
+    this.fireZones.push({
+      x,
+      y,
+      ownerId,
+      radius,
+      life: duration,
+      maxLife: duration,
+      burnDuration: options.burnDuration || 4,
+      burnDps: options.burnDps || 115
+    });
+    this.effects.push({ type: 'ultimate-ring', x, y, color: '#ff7a2f', life: 0.32, maxLife: 0.32, radius });
+  }
+
+  updateFireZones(delta) {
+    if (this.finished) return;
+    const now = performance.now();
+    for (const zone of this.fireZones) {
+      zone.life -= delta;
+      for (const entity of this.entities) {
+        if (!entity.alive || entity.id === zone.ownerId) continue;
+        if (this.isMultiplayer && !entity.controlled) continue;
+        if (Math.hypot(entity.x - zone.x, entity.y - zone.y) <= zone.radius + (entity.radius || 0)) {
+          entity.burnUntil = Math.max(entity.burnUntil || 0, now + zone.burnDuration * 1000);
+          entity.burnDps = Math.max(entity.burnDps || 0, zone.burnDps);
+        }
+      }
+    }
+    this.fireZones = this.fireZones.filter((zone) => zone.life > 0);
+    for (const entity of this.entities) {
+      if (!entity.alive || now >= (entity.burnUntil || 0)) continue;
+      if (this.isMultiplayer && !entity.controlled) continue;
+      entity.burnTickTimer = (entity.burnTickTimer || 0) - delta;
+      if (entity.burnTickTimer > 0) continue;
+      entity.burnTickTimer = 0.5;
+      this.damageBurnEntity(entity, (entity.burnDps || 105) * 0.5);
+    }
+  }
+
+  damageBurnEntity(entity, amount) {
+    if (!entity.alive) return;
+    const damageMultiplier = performance.now() < (entity.damageReductionUntil || 0) ? (entity.damageTakenMultiplier || 0.7) : 1;
+    entity.hp = Math.max(0, entity.hp - Math.round(amount * damageMultiplier));
+    this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#ff7a2f', life: 0.2, maxLife: 0.2, radius: 26 });
+    if (entity.hp <= 0) this.turnIntoGhost(entity);
+    if (entity.controlled && this.isMultiplayer) {
+      this.stateSendTimer = 0;
+      this.broadcastState(1);
+    }
+  }
+
   addUltimateHit(entity) {
     if (!entity?.character?.id) return false;
     if (entity.ultimateReady) return false;
@@ -1088,7 +1169,7 @@ export class GameScene {
     return performance.now() < (entity?.stunnedUntil || 0);
   }
 
-  performUltimate(owner, dirX, dirY, fromNetwork = false) {
+  performUltimate(owner, dirX, dirY, fromNetwork = false, power = 1) {
     if (!owner?.alive || this.isStunned(owner)) return;
     if (!owner.ultimateReady && !fromNetwork) return;
     const length = Math.hypot(dirX, dirY) || 1;
@@ -1099,7 +1180,7 @@ export class GameScene {
     owner.ultimateReady = false;
     owner.ultimateHits = 0;
     if (owner.controlled && this.isMultiplayer && this.game.room?.code && !fromNetwork) {
-      this.game.network.sendPlayerUltimate({ code: this.game.room.code, dirX: nx, dirY: ny });
+      this.game.network.sendPlayerUltimate({ code: this.game.room.code, dirX: nx, dirY: ny, power });
     }
     const id = owner.character.id;
     if (id === 'ain') this.castAinUltimate(owner);
@@ -1109,7 +1190,8 @@ export class GameScene {
     else if (id === 'hyoseong') this.castHyoseongUltimate(owner);
     else if (id === 'jaejun_cowboy') this.castCowboyUltimate(owner);
     else if (id === 'ain_hwang_general') this.castAinHwangGeneralUltimate(owner);
-    else if (id === 'seojun_boxer') this.castSeojunBoxerUltimate(owner, nx, ny);
+    else if (id === 'seojun_boxer') this.castSeojunBoxerUltimate(owner, nx, ny, power);
+    else if (id === 'hyoseong_gundam') this.castHyoseongGundamUltimate(owner, nx, ny);
   }
 
   castAinUltimate(owner) {
@@ -1165,9 +1247,9 @@ export class GameScene {
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#f3d16a', life: 0.85, maxLife: 0.85, radius: 118 });
   }
 
-  castSeojunBoxerUltimate(owner, nx, ny) {
+  castSeojunBoxerUltimate(owner, nx, ny, power = 1) {
     this.playAttackProximitySound(owner, ['seojun_boxer'], '/assets/audio/punch-swing.wav', { selfVolume: 0.86, maxVolume: 0.76, minVolume: 0.18, range: 760 });
-    const range = 340;
+    const range = 220 * Math.max(0.35, Math.min(1, power || 1));
     const radius = 112;
     const damage = 1450;
     const startX = owner.x;
@@ -1183,6 +1265,38 @@ export class GameScene {
         const pushX = distance > 1 ? (entity.x - owner.x) / distance : nx;
         const pushY = distance > 1 ? (entity.y - owner.y) / distance : ny;
         this.knockEntityBack(entity, pushX, pushY, 42);
+      }
+    }
+  }
+
+  castHyoseongGundamUltimate(owner, nx, ny) {
+    this.playAttackProximitySound(owner, ['hyoseong_gundam'], '/assets/audio/sniper-fire.wav', { selfVolume: 0.84, maxVolume: 0.72, minVolume: 0.18, range: 820 });
+    const range = 420;
+    const pathRadius = 58;
+    const damage = 1850;
+    const startX = owner.x;
+    const startY = owner.y;
+    this.leapEntity(owner, nx, ny, range);
+    const endX = owner.x;
+    const endY = owner.y;
+    const travel = Math.max(1, Math.hypot(endX - startX, endY - startY));
+    this.effects.push({ type: 'line', x: startX, y: startY, dx: (endX - startX) / travel, dy: (endY - startY) / travel, color: '#ff7a2f', life: 0.36, maxLife: 0.36, range: travel });
+    this.effects.push({ type: 'ultimate-ring', x: endX, y: endY, color: '#ff7a2f', life: 0.7, maxLife: 0.7, radius: 130 });
+    const bombs = Math.max(3, Math.ceil(travel / 95));
+    for (let i = 0; i <= bombs; i += 1) {
+      const t = i / bombs;
+      const x = startX + (endX - startX) * t;
+      const y = startY + (endY - startY) * t;
+      this.createFireZone(x, y, owner.id, 74, 3.4, { burnDuration: 4, burnDps: 130 });
+      this.effects.push({ type: 'muzzle', x, y, color: '#ffb13b', life: 0.24, maxLife: 0.24, radius: 34 });
+    }
+    for (const entity of this.entities) {
+      if (!entity.alive || entity.id === owner.id) continue;
+      const hitSize = (entity.hitRadius || entity.radius) + pathRadius;
+      if (this.distanceToSegment(entity.x, entity.y, startX, startY, endX, endY) <= hitSize) {
+        this.damageEntity(entity, damage, owner);
+        entity.burnUntil = Math.max(entity.burnUntil || 0, performance.now() + 4000);
+        entity.burnDps = Math.max(entity.burnDps || 0, 130);
       }
     }
   }
@@ -1299,14 +1413,30 @@ export class GameScene {
         if (this.distanceToSegment(entity.x, entity.y, oldX, oldY, projectile.x, projectile.y) <= hitSize) {
           const owner = this.entities.find((item) => item.id === projectile.ownerId);
           this.damageEntity(entity, projectile.damage, projectile.chargeUltimate === false ? null : owner);
+          if (projectile.type === 'rocket') this.explodeRocket(projectile);
           projectile.life = 0;
           break;
         }
       }
-      if (this.isWallAt(projectile.x, projectile.y, 2) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) projectile.life = 0;
-      if ((projectile.travelLeft ?? 0) <= 0) projectile.life = 0;
+      if (this.isWallAt(projectile.x, projectile.y, 2) || !this.game.mapManager.isInsideArena(this.map, projectile.x, projectile.y, 0)) {
+        if (projectile.type === 'rocket') this.explodeRocket(projectile);
+        projectile.life = 0;
+      }
+      if ((projectile.travelLeft ?? 0) <= 0) {
+        if (projectile.type === 'rocket') this.explodeRocket(projectile);
+        projectile.life = 0;
+      }
     }
     this.projectiles = this.projectiles.filter((projectile) => projectile.life > 0);
+  }
+
+  explodeRocket(projectile) {
+    if (projectile.exploded) return;
+    projectile.exploded = true;
+    this.createFireZone(projectile.x, projectile.y, projectile.ownerId, projectile.fireRadius || 76, projectile.fireDuration || 3, {
+      burnDuration: projectile.burnDuration || 4,
+      burnDps: projectile.burnDps || 115
+    });
   }
 
   findNearestProjectileTarget(projectile) {
@@ -1396,7 +1526,9 @@ export class GameScene {
     ctx.translate(-this.camera.x, -this.camera.y);
     this.drawStorm(ctx);
     this.drawZones(ctx);
+    this.drawFireZones(ctx);
     this.drawAimLine(ctx);
+    this.drawUltimateAimLine(ctx);
     this.effects.forEach((effect) => this.drawEffect(ctx, effect));
     this.projectiles.forEach((projectile) => this.drawProjectile(ctx, projectile));
     this.entities.forEach((entity) => { if (this.canSeeEntity(entity)) this.drawEntity(ctx, entity); });
@@ -1453,6 +1585,76 @@ export class GameScene {
     for (const zone of [...(this.map.walls || []), ...(this.map.foliage || [])]) {
       ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
     }
+  }
+
+  drawFireZones(ctx) {
+    if (!this.fireZones?.length) return;
+    for (const zone of this.fireZones) {
+      const t = Math.max(0, zone.life / zone.maxLife);
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.86, 0.34 + t * 0.44);
+      ctx.globalCompositeOperation = 'lighter';
+      if (this.fireImage) {
+        const width = zone.radius * 1.75;
+        const height = zone.radius * 2.65;
+        ctx.drawImage(this.fireImage, zone.x - width / 2, zone.y - height * 0.72, width, height);
+      }
+      const gradient = ctx.createRadialGradient(zone.x, zone.y, zone.radius * 0.12, zone.x, zone.y, zone.radius);
+      gradient.addColorStop(0, 'rgba(255, 238, 132, 0.42)');
+      gradient.addColorStop(0.42, 'rgba(255, 104, 24, 0.32)');
+      gradient.addColorStop(1, 'rgba(255, 58, 10, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawUltimateAimLine(ctx) {
+    const player = this.getControlledEntity();
+    if (this.ultimatePointerId === null || !player?.alive || !player.ultimateReady) return;
+    const id = player.character?.id;
+    const vx = this.ultimateVector.x || player.dirX || 0;
+    const vy = this.ultimateVector.y || player.dirY || -1;
+    const power = Math.max(0.35, Math.min(1, this.ultimateVector.power || 1));
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = '#ffffff';
+    ctx.lineCap = 'round';
+    ctx.setLineDash([20, 14]);
+    if (id === 'seojun_boxer') {
+      const range = 220 * power;
+      const x = player.x + vx * range;
+      const y = player.y + vy * range;
+      ctx.globalAlpha = 0.48;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.24;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x, y, 112, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (id === 'hyoseong_gundam') {
+      const range = 420;
+      ctx.globalAlpha = 0.46;
+      ctx.lineWidth = 18;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x + vx * range, player.y + vy * range);
+      ctx.stroke();
+      ctx.globalAlpha = 0.22;
+      ctx.setLineDash([]);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x + vx * range, player.y + vy * range);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   drawAimLine(ctx) {
@@ -1826,16 +2028,23 @@ export class GameScene {
     ctx.shadowColor = projectile.color;
     ctx.shadowBlur = projectile.type === 'sniper' ? 18 : 10;
     ctx.beginPath();
-    if (projectile.type === 'missile') {
+    if (projectile.type === 'missile' || projectile.type === 'rocket') {
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
       ctx.beginPath();
-      ctx.moveTo(16, 0);
-      ctx.lineTo(-10, -7);
-      ctx.lineTo(-5, 0);
-      ctx.lineTo(-10, 7);
+      ctx.moveTo(projectile.type === 'rocket' ? 20 : 16, 0);
+      ctx.lineTo(-12, -8);
+      ctx.lineTo(-6, 0);
+      ctx.lineTo(-12, 8);
       ctx.closePath();
       ctx.fill();
+      if (projectile.type === 'rocket') {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#ffd36a';
+        ctx.beginPath();
+        ctx.arc(-16, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
       ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
       ctx.fill();
