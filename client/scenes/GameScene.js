@@ -27,6 +27,7 @@ export class GameScene {
     this.fireZones = [];
     this.alcoholZones = [];
     this.catPounceZones = [];
+    this.chemistHealZones = [];
     this.fireImage = null;
     this.catPounceImage = null;
     this.fireCrackleTimer = 0;
@@ -93,9 +94,10 @@ export class GameScene {
       this.loadImage('/assets/characters/jaejun-bartender-back.png').catch(() => null),
       this.loadImage('/assets/characters/ain-artcat-reference.png').catch(() => null),
       this.loadImage('/assets/characters/ain-haru-butler-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-chemist-reference.png').catch(() => null),
       this.loadImage('/assets/effects/haru-cat-pounce.png').catch(() => null),
       this.loadImage('/assets/effects/fire-particle.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, catPounceImage, fireImage]) => {
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, catPounceImage, fireImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
       this.catPounceImage = catPounceImage;
@@ -139,6 +141,7 @@ export class GameScene {
       }
       if (ainArtcatSprite) this.setupCharacterSprite('ain_artcat', ainArtcatSprite);
       if (ainHaruButlerSprite) this.setupCharacterSprite('ain_haru_butler', ainHaruButlerSprite);
+      if (jaejunChemistSprite) this.setupCharacterSprite('jaejun_chemist', jaejunChemistSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -180,6 +183,7 @@ export class GameScene {
     this.fireZones = [];
     this.alcoholZones = [];
     this.catPounceZones = [];
+    this.chemistHealZones = [];
     this.fireCrackleTimer = 0;
     this.startedAt = performance.now();
     this.setupStorm();
@@ -202,6 +206,7 @@ export class GameScene {
       alive: true, dirX: 0, dirY: -1, attackTimer: 0, ammo: 3, maxAmmo: 3, ammoReloadTimer: 0,
       ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, damageReductionUntil: 0, damageTakenMultiplier: 1, waterSlowUntil: 0,
       artcatSlowStacks: 0, artcatSlowUntil: 0, artcatMarks: {},
+      chemistAttackIndex: 0,
       lastCombatAt: performance.now(), regenTickTimer: 0
     };
   }
@@ -647,6 +652,7 @@ export class GameScene {
     this.updateFireZones(delta);
     this.updateAlcoholZones(delta);
     this.updateCatPounceZones(delta);
+    this.updateChemistHealZones(delta);
     this.updatePassiveRegen(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
@@ -737,6 +743,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
+    if (id === 'jaejun_chemist') return { type: 'chemicalBeaker', cooldown: 0.18, reloadTime: 1.42, range: 360, speed: 610, width: 9, hitRadius: 18, color: '#bb78ff', damageScale: 1.0, zoneRadius: 92, zoneDuration: 4.0 };
     if (id === 'ain_haru_butler') return { type: 'shortThrust', cooldown: 0.18, reloadTime: 1.28, range: 112, width: 26, color: '#ffd6e8', damageScale: 1.0 };
     if (id === 'ain_artcat') return { type: 'paintCone', cooldown: 0.18, reloadTime: 1.36, range: 150, arcAngle: Math.PI * 0.46, color: '#ff6fcf', damageScale: 1.0, slowPerHit: 0.05, slowResetMs: 2000 };
     if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
@@ -878,6 +885,17 @@ export class GameScene {
       this.playAttackProximitySound(owner, ['jaejun_bartender'], '/assets/audio/bartender-bottle-break.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 660 });
       this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.18, maxLife: 0.18, radius: 24 });
       this.fireProjectile(owner, nx, ny, { ...profile, range: profile.range * attackPower }, 0, 0);
+      return;
+    }
+
+    if (profile.type === 'chemicalBeaker') {
+      const kinds = ['fire', 'slow', 'heal'];
+      const kind = kinds[owner.chemistAttackIndex % kinds.length];
+      owner.chemistAttackIndex = (owner.chemistAttackIndex + 1) % kinds.length;
+      const color = kind === 'fire' ? '#ff7a2f' : (kind === 'slow' ? '#63d7ff' : '#5cff9b');
+      this.playAttackProximitySound(owner, ['jaejun_chemist'], '/assets/audio/jaejun-chemist-bottle-break.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 660 });
+      this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color, life: 0.18, maxLife: 0.18, radius: 24 });
+      this.fireProjectile(owner, nx, ny, { ...profile, color, chemicalKind: kind, range: profile.range * attackPower }, 0, 0);
       return;
     }
 
@@ -1066,7 +1084,8 @@ export class GameScene {
       fireRadius: profile.fireRadius || 0,
       fireDuration: profile.fireDuration || 0,
       burnDuration: profile.burnDuration || 0,
-      burnDps: profile.burnDps || 0
+      burnDps: profile.burnDps || 0,
+      chemicalKind: profile.chemicalKind || null
     });
   }
 
@@ -1294,8 +1313,10 @@ export class GameScene {
           if (this.isMultiplayer && !entity.controlled && !entity.isSummon) continue;
           entity.alcoholSlowUntil = Math.max(entity.alcoholSlowUntil || 0, now + zone.slowDuration * 1000);
           entity.alcoholSlowMultiplier = Math.min(entity.alcoholSlowMultiplier || 1, zone.slowMultiplier);
-          entity.alcoholDps = Math.max(entity.alcoholDps || 0, zone.dps);
-          entity.alcoholDamageUntil = Math.max(entity.alcoholDamageUntil || 0, now + 1000);
+          if ((zone.dps || 0) > 0) {
+            entity.alcoholDps = Math.max(entity.alcoholDps || 0, zone.dps);
+            entity.alcoholDamageUntil = Math.max(entity.alcoholDamageUntil || 0, now + 1000);
+          }
         }
       }
     }
@@ -1508,6 +1529,7 @@ export class GameScene {
     else if (id === 'jaejun_bartender') this.castJaejunBartenderUltimate(owner, nx, ny, power);
     else if (id === 'ain_artcat') this.summonArtcatClone(owner);
     else if (id === 'ain_haru_butler') this.castAinHaruButlerUltimate(owner, nx, ny, power);
+    else if (id === 'jaejun_chemist') this.castJaejunChemistUltimate(owner);
   }
 
   castAinUltimate(owner) {
@@ -1676,6 +1698,19 @@ export class GameScene {
     });
   }
 
+  castJaejunChemistUltimate(owner) {
+    this.playAttackProximitySound(owner, ['jaejun_chemist'], '/assets/audio/jaejun-chemist-bottle-break.wav', { selfVolume: 0.86, maxVolume: 0.74, minVolume: 0.18, range: 720 });
+    owner.hp = Math.min(owner.maxHp, owner.hp + 5000);
+    owner.damageBoostMultiplier = Math.max(owner.damageBoostMultiplier || 1, 1.1);
+    owner.damageBoostUntil = Math.max(owner.damageBoostUntil || 0, performance.now() + 8000);
+    this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#bb78ff', life: 0.65, maxLife: 0.65, radius: 118 });
+    this.effects.push({ type: 'heal', x: owner.x, y: owner.y, color: '#5cff9b', life: 0.5, maxLife: 0.5, radius: 42 });
+    if (owner.controlled && this.isMultiplayer) {
+      this.stateSendTimer = 0;
+      this.broadcastState(1);
+    }
+  }
+
   findTargetInDirection(owner, nx, ny, range, maxAngle) {
     let best = null;
     let bestScore = Infinity;
@@ -1821,6 +1856,11 @@ export class GameScene {
                 this.stateSendTimer = 0;
                 this.broadcastState(1);
               }
+            } else if (projectile.type === 'chemicalBeaker') {
+              this.damageEntity(entity, projectile.damage, owner);
+              projectile.x = entity.x;
+              projectile.y = entity.y;
+              this.spillChemicalBeaker(projectile);
             } else {
               this.damageEntity(entity, projectile.damage, projectile.chargeUltimate === false ? null : owner);
             }
@@ -1835,6 +1875,7 @@ export class GameScene {
         if (projectile.type === 'alcoholBottle') this.spillAlcoholBottle(projectile);
         if (projectile.type === 'charmBottle') this.spillCharmBottle(projectile);
         if (projectile.type === 'catBall') this.createCatPounceZone(projectile);
+        if (projectile.type === 'chemicalBeaker') this.spillChemicalBeaker(projectile);
         projectile.life = 0;
       }
     }
@@ -1892,6 +1933,56 @@ export class GameScene {
       triggered: false
     });
     this.effects.push({ type: 'catWarning', x: projectile.x, y: projectile.y, color: '#ffd6e8', life: projectile.catDelay || 0.7, maxLife: projectile.catDelay || 0.7, radius: projectile.catRadius || 96 });
+  }
+
+  spillChemicalBeaker(projectile) {
+    if (projectile.spilled) return;
+    projectile.spilled = true;
+    const radius = projectile.zoneRadius || 92;
+    const duration = projectile.zoneDuration || 4;
+    if (projectile.chemicalKind === 'fire') {
+      this.createFireZone(projectile.x, projectile.y, projectile.ownerId, radius, duration, { burnDuration: 3.2, burnDps: 130 });
+      return;
+    }
+    if (projectile.chemicalKind === 'slow') {
+      this.createAlcoholZone(projectile.x, projectile.y, projectile.ownerId, radius, duration, {
+        slowDuration: 1.4,
+        slowMultiplier: 0.48,
+        dps: 0
+      });
+      return;
+    }
+    this.chemistHealZones.push({
+      x: projectile.x,
+      y: projectile.y,
+      ownerId: projectile.ownerId,
+      radius,
+      life: duration,
+      maxLife: duration,
+      tickTimer: 0,
+      healPerTick: 120
+    });
+    this.effects.push({ type: 'ultimate-ring', x: projectile.x, y: projectile.y, color: '#5cff9b', life: 0.32, maxLife: 0.32, radius });
+  }
+
+  updateChemistHealZones(delta) {
+    if (!this.chemistHealZones?.length) return;
+    for (const zone of this.chemistHealZones) {
+      zone.life -= delta;
+      zone.tickTimer -= delta;
+      if (zone.tickTimer > 0) continue;
+      zone.tickTimer = 0.45;
+      const owner = this.entities.find((entity) => entity.id === zone.ownerId && entity.alive);
+      if (!owner) continue;
+      if (Math.hypot(owner.x - zone.x, owner.y - zone.y) > zone.radius + (owner.radius || 0)) continue;
+      owner.hp = Math.min(owner.maxHp, owner.hp + zone.healPerTick);
+      this.effects.push({ type: 'heal', x: owner.x, y: owner.y, color: '#5cff9b', life: 0.22, maxLife: 0.22, radius: 24 });
+      if (owner.controlled && this.isMultiplayer) {
+        this.stateSendTimer = 0;
+        this.broadcastState(1);
+      }
+    }
+    this.chemistHealZones = this.chemistHealZones.filter((zone) => zone.life > 0);
   }
 
   updateCatPounceZones(delta) {
@@ -2004,6 +2095,7 @@ export class GameScene {
     this.drawZones(ctx);
     this.drawFireZones(ctx);
     this.drawAlcoholZones(ctx);
+    this.drawChemistHealZones(ctx);
     this.drawAimLine(ctx);
     this.drawUltimateAimLine(ctx);
     this.effects.forEach((effect) => this.drawEffect(ctx, effect));
@@ -2108,6 +2200,31 @@ export class GameScene {
       ctx.setLineDash([12, 10]);
       ctx.beginPath();
       ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  drawChemistHealZones(ctx) {
+    if (!this.chemistHealZones?.length) return;
+    for (const zone of this.chemistHealZones) {
+      const t = Math.max(0, zone.life / zone.maxLife);
+      ctx.save();
+      ctx.globalAlpha = 0.3 + t * 0.22;
+      const gradient = ctx.createRadialGradient(zone.x, zone.y, zone.radius * 0.12, zone.x, zone.y, zone.radius);
+      gradient.addColorStop(0, 'rgba(140, 255, 185, 0.66)');
+      gradient.addColorStop(0.55, 'rgba(64, 232, 132, 0.38)');
+      gradient.addColorStop(1, 'rgba(64, 232, 132, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.62;
+      ctx.strokeStyle = '#7dffb0';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.radius * (1.02 - t * 0.02), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -2236,7 +2353,7 @@ export class GameScene {
       ctx.restore();
       return;
     }
-    if (profile.type === 'alcoholBottle') {
+    if (profile.type === 'alcoholBottle' || profile.type === 'chemicalBeaker') {
       const power = Math.max(0.28, Math.min(1, this.attackVector.power || 1));
       const x = player.x + this.attackVector.x * range * power;
       const y = player.y + this.attackVector.y * range * power;
@@ -2437,6 +2554,12 @@ export class GameScene {
         left: { x: 450, y: 430, width: 300, height: 500 },
         right: { x: 805, y: 430, width: 310, height: 500 },
         back: { x: 1190, y: 430, width: 315, height: 500 }
+      },
+      jaejun_chemist: {
+        front: { x: 300, y: 250, width: 350, height: 520 },
+        left: { x: 680, y: 270, width: 260, height: 500 },
+        right: { x: 955, y: 270, width: 260, height: 500 },
+        back: { x: 1235, y: 270, width: 280, height: 500 }
       }
     };
     const crops = spriteCrops[id];
@@ -2594,7 +2717,7 @@ export class GameScene {
     ctx.shadowColor = projectile.color;
     ctx.shadowBlur = projectile.type === 'sniper' ? 18 : 10;
     ctx.beginPath();
-    if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'catBall') {
+    if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'catBall' || projectile.type === 'chemicalBeaker') {
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
       ctx.beginPath();
@@ -2605,8 +2728,8 @@ export class GameScene {
         ctx.strokeStyle = '#ff7fb8';
         ctx.lineWidth = 3;
         ctx.stroke();
-      } else if (projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle') {
-        ctx.fillStyle = projectile.type === 'charmBottle' ? '#c078ff' : '#63d7ff';
+      } else if (projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'chemicalBeaker') {
+        ctx.fillStyle = projectile.type === 'charmBottle' ? '#c078ff' : projectile.color;
         ctx.fillRect(-14, -5, 24, 10);
         ctx.fillStyle = '#f8fbff';
         ctx.fillRect(8, -3, 8, 6);

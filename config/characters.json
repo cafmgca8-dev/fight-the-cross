@@ -349,5 +349,35 @@
         }
       ]
     }
+  },
+  {
+    "id": "jaejun_chemist",
+    "name": "\uc7ac\uc900-\ud654\ud559\uc790",
+    "rarity": "Hero",
+    "hp": 4400,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "\ube44\ucee4 \ud22c\ucc99",
+      "damage": 360,
+      "effects": [
+        {
+          "type": "rotatingChemicalZone",
+          "range": 360,
+          "radius": 92
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "\uac15\ud654 \ud3ec\uc158",
+      "description": "HP\ub97c 5000 \ud68c\ubcf5\ud558\uace0 \uc77c\uc815 \uc2dc\uac04 \uacf5\uaca9\ub825\uc774 10% \uc99d\uac00\ud569\ub2c8\ub2e4.",
+      "damage": 0,
+      "effects": [
+        {
+          "type": "healAndDamageBoost",
+          "heal": 5000,
+          "damageMultiplier": 1.1
+        }
+      ]
+    }
   }
 ]
