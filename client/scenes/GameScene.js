@@ -746,10 +746,10 @@ export class GameScene {
     if (id === 'jaejun_chemist') return { type: 'chemicalBeaker', cooldown: 0.18, reloadTime: 1.42, range: 360, speed: 610, width: 9, hitRadius: 18, color: '#bb78ff', damageScale: 1.0, zoneRadius: 92, zoneDuration: 4.0 };
     if (id === 'ain_haru_butler') return { type: 'shortThrust', cooldown: 0.18, reloadTime: 1.28, range: 112, width: 26, color: '#ffd6e8', damageScale: 1.0 };
     if (id === 'ain_artcat') return { type: 'paintCone', cooldown: 0.18, reloadTime: 1.36, range: 150, arcAngle: Math.PI * 0.46, color: '#ff6fcf', damageScale: 1.0, slowPerHit: 0.05, slowResetMs: 2000 };
-    if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.18, reloadTime: 1.38, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
+    if (id === 'ain_hwang_general') return { type: 'slashDash', cooldown: 0.34, reloadTime: 1.7, range: 122, width: 32, color: '#f3d16a', damageScale: 1.0, dashDistance: 122 };
     if (id === 'seojun_boxer') return { type: 'boxerPunch', cooldown: 0.18, reloadTime: 1.24, range: 112, width: 28, color: '#ff6b5f', damageScale: 1.0, knockback: 36 };
     if (id === 'hyoseong_gundam') return { type: 'rocket', cooldown: 0.18, reloadTime: 1.55, range: 520, speed: 620, width: 9, hitRadius: 24, color: '#ff7a2f', damageScale: 1.0, fireRadius: 76, fireDuration: 3.0, burnDuration: 4.0, burnDps: 115 };
-    if (id === 'jaejun_bartender') return { type: 'alcoholBottle', cooldown: 0.18, reloadTime: 1.42, range: 285, speed: 560, width: 8, hitRadius: 20, color: '#63d7ff', damageScale: 0, zoneRadius: 96, zoneDuration: 4.2, slowDuration: 2.4, slowMultiplier: 0.42, dps: 95 };
+    if (id === 'jaejun_bartender') return { type: 'alcoholBottle', cooldown: 0.18, reloadTime: 1.42, range: 285, speed: 560, width: 8, hitRadius: 20, color: '#63d7ff', damageScale: 0, zoneRadius: 96, zoneDuration: 4.2, slowDuration: 2.4, slowMultiplier: 0.42, dps: 135 };
     if (id === 'jaejun_cowboy') return { type: 'pistolBurst', cooldown: 0.18, reloadTime: 1.45, range: 430, speed: 900, width: 5, hitRadius: 15, spread: 0.13, color: '#ffd66b', damageScale: 1.0 };
     if (id === 'kiseong') return { type: 'clap', cooldown: 0.2, reloadTime: 1.35, range: 145, arcAngle: Math.PI * 0.58, color: '#ffb84d', damageScale: 1.0 };
     if (id === 'hyoseong') return { type: 'thrust', cooldown: 0.18, reloadTime: 1.3, range: 210, width: 28, color: '#75d8ff', damageScale: 1.0 };
@@ -1560,7 +1560,7 @@ export class GameScene {
     const duration = 5000;
     owner.speedBoostMultiplier = 0.55;
     owner.speedBoostUntil = Math.max(owner.speedBoostUntil || 0, performance.now() + duration);
-    owner.damageBoostMultiplier = 2.4;
+    owner.damageBoostMultiplier = 1.8;
     owner.damageBoostUntil = Math.max(owner.damageBoostUntil || 0, performance.now() + duration);
     this.effects.push({ type: 'ultimate-ring', x: owner.x, y: owner.y, color: '#ff7a3d', life: 0.7, maxLife: 0.7, radius: 120 });
   }
@@ -1569,7 +1569,7 @@ export class GameScene {
     this.playAttackProximitySound(owner, ['hyoseong'], '/assets/audio/hyoseong-ultimate-splash.wav', { selfVolume: 0.88, maxVolume: 0.78, minVolume: 0.18, range: 760 });
     const duration = 5000;
     const until = performance.now() + duration;
-    const slow = this.map.waterSpeedMultiplier || 0.38;
+    const slow = Math.min(this.map.waterSpeedMultiplier || 0.38, 0.28);
     for (const entity of this.entities) {
       if (!entity.alive || entity.id === owner.id) continue;
       entity.waterSlowUntil = Math.max(entity.waterSlowUntil || 0, until);
@@ -1657,7 +1657,7 @@ export class GameScene {
       radius: 9,
       hitRadius: 24,
       travelLeft: range,
-      damage: 0,
+      damage: owner.character?.ultimate?.damage || 1650,
       life: Math.max(0.24, range / 610 + 0.08),
       color: '#c078ff',
       type: 'charmBottle',
@@ -1666,6 +1666,7 @@ export class GameScene {
       passThroughWalls: true,
       charmRadius: 96,
       charmDuration: 3000,
+      charmDamage: owner.character?.ultimate?.damage || 1650,
       chargeUltimate: false
     });
   }
@@ -1852,7 +1853,9 @@ export class GameScene {
             const owner = this.entities.find((item) => item.id === projectile.ownerId);
             if (projectile.type === 'charmBottle') {
               this.applyBartenderCharm(owner, entity, projectile.charmDuration || 3000);
-              if (owner && this.addUltimateHit(owner) && owner.controlled && this.isMultiplayer) {
+              if (projectile.charmDamage) {
+                this.damageEntity(entity, projectile.charmDamage, owner);
+              } else if (owner && this.addUltimateHit(owner) && owner.controlled && this.isMultiplayer) {
                 this.stateSendTimer = 0;
                 this.broadcastState(1);
               }
@@ -1911,7 +1914,9 @@ export class GameScene {
       if (!entity.alive || entity.id === projectile.ownerId) continue;
       if (Math.hypot(entity.x - projectile.x, entity.y - projectile.y) <= radius + (entity.hitRadius || entity.radius)) {
         this.applyBartenderCharm(owner, entity, projectile.charmDuration || 3000);
-        if (owner && this.addUltimateHit(owner) && owner.controlled && this.isMultiplayer) {
+        if (projectile.charmDamage) {
+          this.damageEntity(entity, projectile.charmDamage, owner);
+        } else if (owner && this.addUltimateHit(owner) && owner.controlled && this.isMultiplayer) {
           this.stateSendTimer = 0;
           this.broadcastState(1);
         }
@@ -2372,6 +2377,26 @@ export class GameScene {
       ctx.beginPath();
       ctx.arc(x, y, profile.zoneRadius || 96, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+      return;
+    }
+    if (profile.type === 'pistolBurst') {
+      const baseAngle = Math.atan2(this.attackVector.y, this.attackVector.x);
+      ctx.globalAlpha = 0.42;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.setLineDash([20, 14]);
+      [-profile.spread, 0, profile.spread].forEach((offset) => {
+        const angle = baseAngle + offset;
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.x + dx * range, player.y + dy * range);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
       ctx.restore();
       return;
     }

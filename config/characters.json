@@ -60,7 +60,7 @@
     "maxLevel": 10,
     "basicAttack": {
       "name": "저격총",
-      "damage": 1500,
+      "damage": 1350,
       "effects": []
     },
     "ultimate": {
@@ -99,7 +99,7 @@
       "effects": [
         {
           "type": "drunkPower",
-          "damageMultiplier": 2.4,
+          "damageMultiplier": 1.8,
           "speedMultiplier": 0.55,
           "durationMs": 5000
         }
@@ -114,7 +114,7 @@
     "maxLevel": 10,
     "basicAttack": {
       "name": "빗자루 찌르기",
-      "damage": 880,
+      "damage": 1000,
       "effects": [
         {
           "type": "thrust",
@@ -129,7 +129,7 @@
       "effects": [
         {
           "type": "globalWaterSlow",
-          "speedMultiplier": 0.38,
+          "speedMultiplier": 0.28,
           "durationMs": 5000
         }
       ]
@@ -199,7 +199,7 @@
     "id": "seojun_boxer",
     "name": "서준-복서",
     "rarity": "Rare",
-    "hp": 4200,
+    "hp": 4700,
     "maxLevel": 10,
     "basicAttack": {
       "name": "복서 펀치",
@@ -271,14 +271,14 @@
           "range": 360,
           "radius": 96,
           "slowMultiplier": 0.42,
-          "dps": 95
+          "dps": 135
         }
       ]
     },
     "ultimate": {
       "name": "\ud2b9\uc81c \uce75\ud14c\uc77c",
       "description": "\uc801\uc744 3\ucd08 \ub3d9\uc548 \ucde8\ud558\uac8c \ub9cc\ub4e4\uc5b4 \uc870\uc791\uc744 \ub9c9\uace0 \uc790\uc2e0\uc5d0\uac8c \ucc9c\ucc9c\ud788 \ub2e4\uac00\uc624\uac8c \ud569\ub2c8\ub2e4.",
-      "damage": 0,
+      "damage": 1650,
       "effects": [
         {
           "type": "charm",
@@ -296,7 +296,7 @@
     "maxLevel": 10,
     "basicAttack": {
       "name": "\ud398\uc778\ud2b8 \ud718\ub450\ub974\uae30",
-      "damage": 780,
+      "damage": 880,
       "effects": [
         {
           "type": "paintCone",
@@ -328,7 +328,7 @@
     "maxLevel": 10,
     "basicAttack": {
       "name": "\uace0\uc591\uc774 \uc7a5\ub09c\uac10 \ucc0c\ub974\uae30",
-      "damage": 820,
+      "damage": 920,
       "effects": [
         {
           "type": "shortThrust",
@@ -339,7 +339,7 @@
     "ultimate": {
       "name": "\ud558\ub8e8 \uae09\uc2b5",
       "description": "\uc6d0\ud558\ub294 \uc704\uce58\uc5d0 \uacf5\uc744 \ub358\uc838 0.7\ucd08 \ub4a4 \uace0\uc591\uc774\uac00 \ud280\uc5b4\ub098\uc640 \uc6d0 \uc548\uc758 \uc801\uc5d0\uac8c \ud53c\ud574\ub97c \uc90d\ub2c8\ub2e4.",
-      "damage": 1700,
+      "damage": 2200,
       "effects": [
         {
           "type": "delayedCatPounce",
