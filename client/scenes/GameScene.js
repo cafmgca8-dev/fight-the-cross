@@ -28,8 +28,10 @@ export class GameScene {
     this.alcoholZones = [];
     this.catPounceZones = [];
     this.chemistHealZones = [];
+    this.officeZones = [];
     this.fireImage = null;
     this.catPounceImage = null;
+    this.businessCompanyImage = null;
     this.fireCrackleTimer = 0;
     this.storm = null;
   }
@@ -95,12 +97,15 @@ export class GameScene {
       this.loadImage('/assets/characters/ain-artcat-reference.png').catch(() => null),
       this.loadImage('/assets/characters/ain-haru-butler-reference.png').catch(() => null),
       this.loadImage('/assets/characters/jaejun-chemist-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/kiseong-businessman-reference.png').catch(() => null),
       this.loadImage('/assets/effects/haru-cat-pounce.png').catch(() => null),
-      this.loadImage('/assets/effects/fire-particle.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, catPounceImage, fireImage]) => {
+      this.loadImage('/assets/effects/fire-particle.png').catch(() => null),
+      this.loadImage('/assets/effects/business-company-front.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, kiseongBusinessmanSprite, catPounceImage, fireImage, businessCompanyImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
       this.catPounceImage = catPounceImage;
+      this.businessCompanyImage = businessCompanyImage;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
       if (seojunSprite) this.setupCharacterSprite('seojun', seojunSprite);
@@ -142,6 +147,7 @@ export class GameScene {
       if (ainArtcatSprite) this.setupCharacterSprite('ain_artcat', ainArtcatSprite);
       if (ainHaruButlerSprite) this.setupCharacterSprite('ain_haru_butler', ainHaruButlerSprite);
       if (jaejunChemistSprite) this.setupCharacterSprite('jaejun_chemist', jaejunChemistSprite);
+      if (kiseongBusinessmanSprite) this.setupCharacterSprite('kiseong_businessman', kiseongBusinessmanSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
       this.loop(this.lastTime);
@@ -184,6 +190,7 @@ export class GameScene {
     this.alcoholZones = [];
     this.catPounceZones = [];
     this.chemistHealZones = [];
+    this.officeZones = [];
     this.fireCrackleTimer = 0;
     this.startedAt = performance.now();
     this.setupStorm();
@@ -653,6 +660,7 @@ export class GameScene {
     this.updateAlcoholZones(delta);
     this.updateCatPounceZones(delta);
     this.updateChemistHealZones(delta);
+    this.updateOfficeZones(delta);
     this.updatePassiveRegen(delta);
     this.broadcastState(delta);
     if (!this.isMultiplayer) this.updateBots(delta);
@@ -743,6 +751,7 @@ export class GameScene {
   getAttackProfile(entity) {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
+    if (id === 'kiseong_businessman') return { type: 'keycapBurst', cooldown: 0.18, reloadTime: 1.48, range: 390, speed: 780, width: 7, hitRadius: 14, spread: 0.42, color: '#1d1f24', damageScale: 1.0 };
     if (id === 'jaejun_chemist') return { type: 'chemicalBeaker', cooldown: 0.18, reloadTime: 1.42, range: 360, speed: 610, width: 9, hitRadius: 18, color: '#bb78ff', damageScale: 1.0, zoneRadius: 92, zoneDuration: 4.0 };
     if (id === 'ain_haru_butler') return { type: 'shortThrust', cooldown: 0.18, reloadTime: 1.28, range: 112, width: 26, color: '#ffd6e8', damageScale: 1.0 };
     if (id === 'ain_artcat') return { type: 'paintCone', cooldown: 0.18, reloadTime: 1.36, range: 150, arcAngle: Math.PI * 0.46, color: '#ff6fcf', damageScale: 1.0, slowPerHit: 0.05, slowResetMs: 2000 };
@@ -868,6 +877,24 @@ export class GameScene {
       return;
     }
 
+    if (profile.type === 'keycapBurst') {
+      this.playAttackProximitySound(owner, ['kiseong_businessman'], '/assets/audio/kiseong-businessman-keyboard.mp3', { selfVolume: 0.72, maxVolume: 0.62, minVolume: 0.16, range: 640, playbackRate: 1.85, startTime: 0.05, stopAfter: 430 });
+      const baseAngle = Math.atan2(ny, nx);
+      const shots = 12;
+      for (let i = 0; i < shots; i += 1) {
+        const row = Math.floor(i / 4);
+        const column = i % 4;
+        const offset = ((column - 1.5) / 1.5) * profile.spread + (row - 1) * 0.035;
+        const angle = baseAngle + offset;
+        const shotX = Math.cos(angle);
+        const shotY = Math.sin(angle);
+        const side = column - 1.5;
+        this.fireProjectile(owner, shotX, shotY, { ...profile, range: profile.range - row * 34 }, -ny * side * 6, nx * side * 6);
+      }
+      this.effects.push({ type: 'muzzle', x: owner.x + nx * 32, y: owner.y + ny * 32, color: '#8a8d95', life: 0.18, maxLife: 0.18, radius: 28 });
+      return;
+    }
+
     if (profile.type === 'rocket') {
       const rocketSound = this.playAttackProximitySound(owner, ['hyoseong_gundam'], '/assets/audio/hyoseong-gundam-missile-fly.wav', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.18, range: 760 });
       if (rocketSound) {
@@ -915,7 +942,12 @@ export class GameScene {
     const maxVolume = options.maxVolume ?? 0.62;
     const minVolume = options.minVolume ?? 0.16;
     const volume = owner.controlled ? selfVolume : Math.max(minVolume, maxVolume * (1 - distance / audibleRange));
-    return this.game.audio.playEffect(src, { volume });
+    return this.game.audio.playEffect(src, {
+      volume,
+      playbackRate: options.playbackRate || 1,
+      startTime: options.startTime || 0,
+      stopAfter: options.stopAfter || 0
+    });
   }
 
   meleeAttack(owner, nx, ny, profile) {
@@ -1530,6 +1562,7 @@ export class GameScene {
     else if (id === 'ain_artcat') this.summonArtcatClone(owner);
     else if (id === 'ain_haru_butler') this.castAinHaruButlerUltimate(owner, nx, ny, power);
     else if (id === 'jaejun_chemist') this.castJaejunChemistUltimate(owner);
+    else if (id === 'kiseong_businessman') this.castKiseongBusinessmanUltimate(owner, nx, ny, power);
   }
 
   castAinUltimate(owner) {
@@ -1710,6 +1743,15 @@ export class GameScene {
       this.stateSendTimer = 0;
       this.broadcastState(1);
     }
+  }
+
+  castKiseongBusinessmanUltimate(owner, nx, ny, power = 1) {
+    this.playAttackProximitySound(owner, ['kiseong_businessman'], '/assets/audio/kiseong-businessman-metal-clang.mp3', { selfVolume: 0.86, maxVolume: 0.76, minVolume: 0.18, range: 760, startTime: 0.02, stopAfter: 620 });
+    const aimPower = Math.max(0.28, Math.min(1, power || 1));
+    const range = 420 * aimPower;
+    const x = Math.max(0, Math.min(this.map.width, owner.x + nx * range));
+    const y = Math.max(0, Math.min(this.map.height, owner.y + ny * range));
+    this.createOfficeZone(x, y, owner.id, 108, 8, { healPerSecond: 180, damagePerSecond: 155 });
   }
 
   findTargetInDirection(owner, nx, ny, range, maxAngle) {
@@ -1990,6 +2032,53 @@ export class GameScene {
     this.chemistHealZones = this.chemistHealZones.filter((zone) => zone.life > 0);
   }
 
+  createOfficeZone(x, y, ownerId, radius = 108, duration = 8, options = {}) {
+    this.officeZones.push({
+      x,
+      y,
+      ownerId,
+      radius,
+      life: duration,
+      maxLife: duration,
+      healPerSecond: options.healPerSecond || 180,
+      damagePerSecond: options.damagePerSecond || 155,
+      tickTimer: 0.35,
+      chargedIds: new Set()
+    });
+    this.effects.push({ type: 'ultimate-ring', x, y, color: '#48f29c', life: 0.45, maxLife: 0.45, radius });
+  }
+
+  updateOfficeZones(delta) {
+    if (!this.officeZones?.length || this.finished) return;
+    for (const zone of this.officeZones) {
+      zone.life -= delta;
+      zone.tickTimer -= delta;
+      if (zone.tickTimer > 0) continue;
+      zone.tickTimer = 0.5;
+      const owner = this.entities.find((entity) => entity.id === zone.ownerId && entity.alive);
+      for (const entity of this.entities) {
+        if (!entity.alive) continue;
+        if (Math.hypot(entity.x - zone.x, entity.y - zone.y) > zone.radius + (entity.radius || 0)) continue;
+        if (entity.id === zone.ownerId) {
+          entity.hp = Math.min(entity.maxHp, entity.hp + Math.round(zone.healPerSecond * 0.5));
+          this.effects.push({ type: 'heal', x: entity.x, y: entity.y, color: '#48f29c', life: 0.22, maxLife: 0.22, radius: 24 });
+          if (entity.controlled && this.isMultiplayer) {
+            this.stateSendTimer = 0;
+            this.broadcastState(1);
+          }
+          continue;
+        }
+        if (owner?.controlled && !zone.chargedIds.has(entity.id)) {
+          zone.chargedIds.add(entity.id);
+          this.addUltimateHit(owner);
+        }
+        if (this.isMultiplayer && !entity.controlled && !entity.isSummon) continue;
+        this.damageHazardEntity(entity, zone.damagePerSecond * 0.5, '#48f29c');
+      }
+    }
+    this.officeZones = this.officeZones.filter((zone) => zone.life > 0);
+  }
+
   updateCatPounceZones(delta) {
     if (!this.catPounceZones.length) return;
     for (const zone of this.catPounceZones) {
@@ -2101,6 +2190,7 @@ export class GameScene {
     this.drawFireZones(ctx);
     this.drawAlcoholZones(ctx);
     this.drawChemistHealZones(ctx);
+    this.drawOfficeZones(ctx);
     this.drawAimLine(ctx);
     this.drawUltimateAimLine(ctx);
     this.effects.forEach((effect) => this.drawEffect(ctx, effect));
@@ -2235,6 +2325,52 @@ export class GameScene {
     }
   }
 
+  drawOfficeZones(ctx) {
+    if (!this.officeZones?.length) return;
+    for (const zone of this.officeZones) {
+      const t = Math.max(0, zone.life / zone.maxLife);
+      ctx.save();
+      ctx.globalAlpha = 0.32 + t * 0.24;
+      const gradient = ctx.createRadialGradient(zone.x, zone.y, zone.radius * 0.1, zone.x, zone.y, zone.radius);
+      gradient.addColorStop(0, 'rgba(128, 255, 176, 0.72)');
+      gradient.addColorStop(0.58, 'rgba(52, 214, 108, 0.42)');
+      gradient.addColorStop(1, 'rgba(52, 214, 108, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.72;
+      ctx.strokeStyle = '#7dffae';
+      ctx.lineWidth = 5;
+      ctx.setLineDash([13, 9]);
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.radius * (1.02 - t * 0.02), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (this.businessCompanyImage) {
+        const width = 92;
+        const height = 92;
+        ctx.globalAlpha = 0.98;
+        ctx.shadowColor = 'rgba(0, 0, 0, .42)';
+        ctx.shadowBlur = 14;
+        ctx.drawImage(this.businessCompanyImage, zone.x - width / 2, zone.y - height + 22, width, height);
+      } else {
+        ctx.globalAlpha = 0.95;
+        ctx.fillStyle = '#e9efe6';
+        ctx.fillRect(zone.x - 30, zone.y - 58, 60, 58);
+        ctx.fillStyle = '#244f91';
+        ctx.fillRect(zone.x - 23, zone.y - 50, 46, 13);
+        ctx.fillStyle = '#78c5dd';
+        for (let row = 0; row < 2; row += 1) {
+          for (let col = 0; col < 3; col += 1) {
+            ctx.fillRect(zone.x - 22 + col * 15, zone.y - 30 + row * 13, 9, 7);
+          }
+        }
+      }
+      ctx.restore();
+    }
+  }
+
   drawUltimateAimLine(ctx) {
     const player = this.getControlledEntity();
     if (this.ultimatePointerId === null || !player?.alive || !player.ultimateReady) return;
@@ -2306,6 +2442,22 @@ export class GameScene {
       ctx.setLineDash([]);
       ctx.beginPath();
       ctx.arc(x, y, 96, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (id === 'kiseong_businessman') {
+      const aimPower = Math.max(0.28, Math.min(1, this.ultimateVector.power || 1));
+      const range = 420 * aimPower;
+      const x = player.x + vx * range;
+      const y = player.y + vy * range;
+      ctx.globalAlpha = 0.46;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.24;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x, y, 108, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -2396,6 +2548,32 @@ export class GameScene {
         ctx.lineTo(player.x + dx * range, player.y + dy * range);
         ctx.stroke();
       });
+      ctx.setLineDash([]);
+      ctx.restore();
+      return;
+    }
+    if (profile.type === 'keycapBurst') {
+      const baseAngle = Math.atan2(this.attackVector.y, this.attackVector.x);
+      const half = profile.spread || 0.42;
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.arc(player.x, player.y, range, baseAngle - half, baseAngle + half);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 0.54;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 5;
+      ctx.setLineDash([18, 12]);
+      for (const offset of [-half, -half * 0.35, half * 0.35, half]) {
+        const dx = Math.cos(baseAngle + offset);
+        const dy = Math.sin(baseAngle + offset);
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.x + dx * range, player.y + dy * range);
+        ctx.stroke();
+      }
       ctx.setLineDash([]);
       ctx.restore();
       return;
@@ -2585,6 +2763,12 @@ export class GameScene {
         left: { x: 680, y: 270, width: 260, height: 500 },
         right: { x: 955, y: 270, width: 260, height: 500 },
         back: { x: 1235, y: 270, width: 280, height: 500 }
+      },
+      kiseong_businessman: {
+        front: { x: 330, y: 250, width: 330, height: 500 },
+        left: { x: 660, y: 250, width: 285, height: 500 },
+        right: { x: 930, y: 250, width: 300, height: 500 },
+        back: { x: 1215, y: 250, width: 290, height: 500 }
       }
     };
     const crops = spriteCrops[id];
@@ -2742,11 +2926,22 @@ export class GameScene {
     ctx.shadowColor = projectile.color;
     ctx.shadowBlur = projectile.type === 'sniper' ? 18 : 10;
     ctx.beginPath();
-    if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'catBall' || projectile.type === 'chemicalBeaker') {
+    if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'catBall' || projectile.type === 'chemicalBeaker' || projectile.type === 'keycapBurst') {
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
       ctx.beginPath();
-      if (projectile.type === 'catBall') {
+      if (projectile.type === 'keycapBurst') {
+        ctx.fillStyle = '#202226';
+        ctx.strokeStyle = '#cfd1d8';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-8, -7, 16, 14);
+        ctx.strokeRect(-8, -7, 16, 14);
+        ctx.fillStyle = '#f4f4f6';
+        ctx.font = '900 8px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('K', 0, 0);
+      } else if (projectile.type === 'catBall') {
         ctx.fillStyle = '#ffd6e8';
         ctx.arc(0, 0, 10, 0, Math.PI * 2);
         ctx.fill();

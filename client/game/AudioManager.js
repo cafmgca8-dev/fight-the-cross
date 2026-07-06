@@ -28,11 +28,23 @@ export class AudioManager {
 
   playEffect(src, options = {}) {
     if (!this.enabled) return null;
-    const config = { volume: 0.72, ...options };
+    const config = { volume: 0.72, playbackRate: 1, startTime: 0, stopAfter: 0, ...options };
     const sound = new Audio(src);
     sound.volume = config.volume;
+    sound.playbackRate = config.playbackRate;
+    if (config.startTime > 0) {
+      sound.addEventListener('loadedmetadata', () => {
+        sound.currentTime = Math.min(config.startTime, Math.max(0, sound.duration - 0.05));
+      }, { once: true });
+    }
     const promise = sound.play();
     if (promise?.catch) promise.catch(() => {});
+    if (config.stopAfter > 0) {
+      window.setTimeout(() => {
+        sound.pause();
+        sound.currentTime = 0;
+      }, config.stopAfter);
+    }
     return sound;
   }
 
