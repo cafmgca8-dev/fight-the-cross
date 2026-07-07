@@ -388,7 +388,7 @@
     "maxLevel": 10,
     "basicAttack": {
       "name": "키캡 난사",
-      "damage": 210,
+      "damage": 260,
       "effects": [
         {
           "type": "keycapBurst",
@@ -405,10 +405,10 @@
         {
           "type": "officeZone",
           "range": 420,
-          "radius": 108,
+          "radius": 122,
           "durationMs": 8000,
           "healPerSecond": 180,
-          "damagePerSecond": 155
+          "damagePerSecond": 230
         }
       ]
     }

@@ -97,11 +97,15 @@ export class GameScene {
       this.loadImage('/assets/characters/ain-artcat-reference.png').catch(() => null),
       this.loadImage('/assets/characters/ain-haru-butler-reference.png').catch(() => null),
       this.loadImage('/assets/characters/jaejun-chemist-reference.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-chemist-front.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-chemist-left.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-chemist-right.png').catch(() => null),
+      this.loadImage('/assets/characters/jaejun-chemist-back.png').catch(() => null),
       this.loadImage('/assets/characters/kiseong-businessman-reference.png').catch(() => null),
       this.loadImage('/assets/effects/haru-cat-pounce.png').catch(() => null),
       this.loadImage('/assets/effects/fire-particle.png').catch(() => null),
       this.loadImage('/assets/effects/business-company-front.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, kiseongBusinessmanSprite, catPounceImage, fireImage, businessCompanyImage]) => {
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, jaejunChemistFront, jaejunChemistLeft, jaejunChemistRight, jaejunChemistBack, kiseongBusinessmanSprite, catPounceImage, fireImage, businessCompanyImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
       this.catPounceImage = catPounceImage;
@@ -146,7 +150,14 @@ export class GameScene {
       }
       if (ainArtcatSprite) this.setupCharacterSprite('ain_artcat', ainArtcatSprite);
       if (ainHaruButlerSprite) this.setupCharacterSprite('ain_haru_butler', ainHaruButlerSprite);
-      if (jaejunChemistSprite) this.setupCharacterSprite('jaejun_chemist', jaejunChemistSprite);
+      if (jaejunChemistFront || jaejunChemistLeft || jaejunChemistRight || jaejunChemistBack) {
+        this.processedCharacterSprites.jaejun_chemist = {
+          front: jaejunChemistFront,
+          left: jaejunChemistLeft,
+          right: jaejunChemistRight,
+          back: jaejunChemistBack
+        };
+      } else if (jaejunChemistSprite) this.setupCharacterSprite('jaejun_chemist', jaejunChemistSprite);
       if (kiseongBusinessmanSprite) this.setupCharacterSprite('kiseong_businessman', kiseongBusinessmanSprite);
       this.setMaskImage(maskImage);
       this.lastTime = performance.now();
@@ -205,6 +216,7 @@ export class GameScene {
     const stats = this.game.levelManager.applyLevel(character, controlled ? (this.game.save.characters[character.id]?.level || 1) : 1);
     return {
       id, name, character, controlled, x: spawn.x, y: spawn.y, radius: 18, hitRadius: 24,
+      matchParticipant: true,
       hp: stats.hp, maxHp: stats.hp,
       damage: stats.basicDamage,
       speed: controlled ? 250 : 210,
@@ -878,7 +890,7 @@ export class GameScene {
     }
 
     if (profile.type === 'keycapBurst') {
-      this.playAttackProximitySound(owner, ['kiseong_businessman'], '/assets/audio/kiseong-businessman-keyboard.mp3', { selfVolume: 0.72, maxVolume: 0.62, minVolume: 0.16, range: 640, playbackRate: 1.85, startTime: 0.05, stopAfter: 430 });
+      this.playAttackProximitySound(owner, ['kiseong_businessman'], '/assets/audio/kiseong-businessman-keyboard.mp3', { selfVolume: 0.9, maxVolume: 0.76, minVolume: 0.2, range: 700, playbackRate: 2.15, startTime: 0.18, stopAfter: 720 });
       const baseAngle = Math.atan2(ny, nx);
       const shots = 12;
       for (let i = 0; i < shots; i += 1) {
@@ -1513,6 +1525,7 @@ export class GameScene {
       y: target.y - Math.sin(angle) * 46
     }, false);
     clone.isSummon = true;
+    clone.matchParticipant = false;
     clone.summonerId = owner.id;
     clone.controlled = false;
     clone.hp = 2000;
@@ -1751,7 +1764,7 @@ export class GameScene {
     const range = 420 * aimPower;
     const x = Math.max(0, Math.min(this.map.width, owner.x + nx * range));
     const y = Math.max(0, Math.min(this.map.height, owner.y + ny * range));
-    this.createOfficeZone(x, y, owner.id, 108, 8, { healPerSecond: 180, damagePerSecond: 155 });
+    this.createOfficeZone(x, y, owner.id, 122, 8, { healPerSecond: 180, damagePerSecond: 230 });
   }
 
   findTargetInDirection(owner, nx, ny, range, maxAngle) {
@@ -2042,7 +2055,7 @@ export class GameScene {
       maxLife: duration,
       healPerSecond: options.healPerSecond || 180,
       damagePerSecond: options.damagePerSecond || 155,
-      tickTimer: 0.35,
+      tickTimer: 0,
       chargedIds: new Set()
     });
     this.effects.push({ type: 'ultimate-ring', x, y, color: '#48f29c', life: 0.45, maxLife: 0.45, radius });
@@ -2073,7 +2086,8 @@ export class GameScene {
           this.addUltimateHit(owner);
         }
         if (this.isMultiplayer && !entity.controlled && !entity.isSummon) continue;
-        this.damageHazardEntity(entity, zone.damagePerSecond * 0.5, '#48f29c');
+        this.damageEntity(entity, zone.damagePerSecond * 0.5, null);
+        this.effects.push({ type: 'hit', x: entity.x, y: entity.y, color: '#48f29c', life: 0.18, maxLife: 0.18, radius: 26 });
       }
     }
     this.officeZones = this.officeZones.filter((zone) => zone.life > 0);
@@ -2120,7 +2134,7 @@ export class GameScene {
   }
 
   updateHud() {
-    const alive = this.entities.filter((entity) => entity.alive && !entity.isSummon).length;
+    const alive = this.getAliveMatchParticipants().length;
     const stormState = this.getStormState();
     const stormLabel = stormState.progress <= 0 ? '자기장 대기' : '자기장 ' + Math.round(stormState.progress * 100) + '%';
     this.aliveCount.textContent = alive + '명 생존';
@@ -2141,12 +2155,16 @@ export class GameScene {
   }
 
   checkWinner() {
-    const alive = this.entities.filter((entity) => entity.alive && !entity.isSummon);
+    const alive = this.getAliveMatchParticipants();
     if (alive.length > 1 || this.finished) return;
     this.finished = true;
     const winner = alive[0];
     if (this.isMultiplayer && this.game.room?.code) {
       this.finishMultiplayerMatch(winner);
+      return;
+    }
+    if (this.game.getActiveMode()?.id === 'one_vs_one') {
+      this.finishLocalOneVsOneMatch(winner);
       return;
     }
     if (winner?.controlled) {
@@ -2160,6 +2178,28 @@ export class GameScene {
       this.banner.innerHTML = '<strong>패배</strong><span>' + (winner?.name || '상대') + ' 생존</span><button id="retryButton" class="btn">다시 하기</button>';
       document.querySelector('#retryButton').addEventListener('click', () => this.render());
     }
+  }
+
+  getAliveMatchParticipants() {
+    return this.entities.filter((entity) => (
+      entity.alive &&
+      entity.matchParticipant !== false &&
+      !entity.isSummon &&
+      !String(entity.id || '').startsWith('artcat_clone_')
+    ));
+  }
+
+  finishLocalOneVsOneMatch(winner) {
+    const winnerName = winner?.name || '상대';
+    const isWinner = Boolean(winner?.controlled);
+    if (isWinner) this.game.recordVictory();
+    const message = winnerName + ' 승리!';
+    this.banner.innerHTML = '<strong>' + message + '</strong><span>잠시 후 로비로 돌아갑니다.</span>';
+    window.setTimeout(() => {
+      this.cleanup();
+      this.game.message = message;
+      this.game.showScene('lobby');
+    }, 1900);
   }
 
   finishMultiplayerMatch(winner) {
@@ -2457,7 +2497,7 @@ export class GameScene {
       ctx.globalAlpha = 0.24;
       ctx.setLineDash([]);
       ctx.beginPath();
-      ctx.arc(x, y, 108, 0, Math.PI * 2);
+      ctx.arc(x, y, 122, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();

@@ -32,18 +32,28 @@ export class AudioManager {
     const sound = new Audio(src);
     sound.volume = config.volume;
     sound.playbackRate = config.playbackRate;
-    if (config.startTime > 0) {
-      sound.addEventListener('loadedmetadata', () => {
-        sound.currentTime = Math.min(config.startTime, Math.max(0, sound.duration - 0.05));
-      }, { once: true });
-    }
-    const promise = sound.play();
-    if (promise?.catch) promise.catch(() => {});
-    if (config.stopAfter > 0) {
+    const stop = () => {
+      if (config.stopAfter <= 0) return;
       window.setTimeout(() => {
         sound.pause();
         sound.currentTime = 0;
       }, config.stopAfter);
+    };
+    const play = () => {
+      const promise = sound.play();
+      if (promise?.catch) promise.catch(() => {});
+      stop();
+    };
+    if (config.startTime > 0) {
+      sound.addEventListener('loadedmetadata', () => {
+        try {
+          sound.currentTime = Math.min(config.startTime, Math.max(0, sound.duration - 0.05));
+        } catch {}
+        play();
+      }, { once: true });
+      sound.load();
+    } else {
+      play();
     }
     return sound;
   }
