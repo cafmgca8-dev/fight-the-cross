@@ -144,6 +144,8 @@ export class BoxScene {
   getCharacterRewardImage(characterId) {
     if (characterId === 'kiseong') return { src: '/assets/ui/reward-kiseong.png', alt: '기성 획득' };
     if (characterId === 'hyoseong') return { src: '/assets/ui/reward-hyoseong.png', alt: '효성 획득' };
+    const character = this.game.characterManager.getById(characterId);
+    if (character?.image || character?.portrait) return { src: character.image || character.portrait, alt: character.name + ' 획득' };
     return null;
   }
 

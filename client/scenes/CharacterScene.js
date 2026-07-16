@@ -19,8 +19,11 @@ export class CharacterScene {
     const maxLevel = this.game.levelManager.getMaxLevel(character);
     const selected = this.game.save.selectedCharacterId === character.id ? ' selected' : '';
     const disabled = stats.level >= maxLevel ? ' disabled' : '';
+    const image = character.image || character.portrait || '';
+    const art = image ? '<div class="character-art"><img src="' + image + '" alt="' + character.name + '"></div>' : '';
     return '<article class="character-card' + selected + '" data-character-id="' + character.id + '">' +
       '<div><span class="badge">' + character.rarity + '</span><h3 class="card-name">' + character.name + '</h3></div>' +
+      art +
       '<div class="stat-list">' +
       '<div class="stat"><span>레벨</span><strong>' + stats.level + ' / ' + maxLevel + '</strong></div>' +
       '<div class="stat"><span>체력</span><strong>' + stats.hp + '</strong></div>' +

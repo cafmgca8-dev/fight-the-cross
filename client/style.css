@@ -1179,6 +1179,21 @@ body:not(.viewport-activated) #app {
   background: #02030a;
 }
 
+.character-art {
+  min-height: 132px;
+  display: grid;
+  place-items: center;
+  margin: 4px 0 -2px;
+  pointer-events: none;
+}
+
+.character-art img {
+  width: min(170px, 72%);
+  height: 132px;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 18px rgba(0,0,0,.46));
+}
+
 
 .ultimate-pad {
   position: fixed;
