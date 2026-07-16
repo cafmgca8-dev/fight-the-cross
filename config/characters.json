@@ -15,7 +15,11 @@
       "description": "주변 적을 1초 동안 기절시킵니다.",
       "damage": 0,
       "effects": [
-        { "type": "stun", "durationMs": 1000, "radius": 140 }
+        {
+          "type": "stun",
+          "durationMs": 1000,
+          "radius": 140
+        }
       ]
     }
   },
@@ -29,7 +33,10 @@
       "name": "주먹",
       "damage": 500,
       "effects": [
-        { "type": "knockback", "force": 90 }
+        {
+          "type": "knockback",
+          "force": 90
+        }
       ]
     },
     "ultimate": {
@@ -37,7 +44,11 @@
       "description": "4초 동안 이동속도가 2배 증가합니다.",
       "damage": 0,
       "effects": [
-        { "type": "speedMultiplier", "value": 2, "durationMs": 4000 }
+        {
+          "type": "speedMultiplier",
+          "value": 2,
+          "durationMs": 4000
+        }
       ]
     }
   },
@@ -57,7 +68,9 @@
       "description": "유도 미사일을 발사해 큰 피해를 줍니다.",
       "damage": 3000,
       "effects": [
-        { "type": "homingProjectile" }
+        {
+          "type": "homingProjectile"
+        }
       ]
     }
   },
@@ -71,7 +84,10 @@
       "name": "손뼉",
       "damage": 760,
       "effects": [
-        { "type": "wideCone", "range": 145 }
+        {
+          "type": "wideCone",
+          "range": 145
+        }
       ]
     },
     "ultimate": {
@@ -79,7 +95,11 @@
       "description": "잠시 느려지지만 공격력이 크게 증가합니다.",
       "damage": 0,
       "effects": [
-        { "type": "drunkPower", "damageMultiplier": 1.8, "durationMs": 5000 }
+        {
+          "type": "drunkPower",
+          "damageMultiplier": 1.8,
+          "durationMs": 5000
+        }
       ]
     }
   },
@@ -93,7 +113,10 @@
       "name": "빗자루 찌르기",
       "damage": 1000,
       "effects": [
-        { "type": "thrust", "range": 210 }
+        {
+          "type": "thrust",
+          "range": 210
+        }
       ]
     },
     "ultimate": {
@@ -101,7 +124,10 @@
       "description": "자신을 제외한 모든 플레이어의 이동속도를 크게 낮춥니다.",
       "damage": 0,
       "effects": [
-        { "type": "globalWaterSlow", "durationMs": 5000 }
+        {
+          "type": "globalWaterSlow",
+          "durationMs": 5000
+        }
       ]
     }
   },
@@ -115,7 +141,11 @@
       "name": "삼연발 권총",
       "damage": 700,
       "effects": [
-        { "type": "tripleShot", "shots": 3, "range": 430 }
+        {
+          "type": "tripleShot",
+          "shots": 3,
+          "range": 430
+        }
       ]
     },
     "ultimate": {
@@ -123,7 +153,11 @@
       "description": "3초 뒤 근처 모든 적에게 강력한 총격을 가합니다.",
       "damage": 10000,
       "effects": [
-        { "type": "delayedAreaShot", "delayMs": 3000, "radius": 92 }
+        {
+          "type": "delayedAreaShot",
+          "delayMs": 3000,
+          "radius": 92
+        }
       ]
     }
   },
@@ -137,7 +171,11 @@
       "name": "돌진 베기",
       "damage": 950,
       "effects": [
-        { "type": "slashDash", "range": 122, "dashDistance": 122 }
+        {
+          "type": "slashDash",
+          "range": 122,
+          "dashDistance": 122
+        }
       ]
     },
     "ultimate": {
@@ -145,7 +183,11 @@
       "description": "4초 동안 받는 피해가 30% 감소합니다.",
       "damage": 0,
       "effects": [
-        { "type": "damageReduction", "value": 0.7, "durationMs": 4000 }
+        {
+          "type": "damageReduction",
+          "value": 0.7,
+          "durationMs": 4000
+        }
       ]
     }
   },
@@ -159,7 +201,11 @@
       "name": "스트레이트",
       "damage": 820,
       "effects": [
-        { "type": "knockback", "force": 36, "range": 112 }
+        {
+          "type": "knockback",
+          "force": 36,
+          "range": 112
+        }
       ]
     },
     "ultimate": {
@@ -167,7 +213,11 @@
       "description": "조준한 위치로 날아가 주변 적에게 피해를 줍니다.",
       "damage": 1450,
       "effects": [
-        { "type": "targetLeapAreaDamage", "range": 340, "radius": 112 }
+        {
+          "type": "targetLeapAreaDamage",
+          "range": 340,
+          "radius": 112
+        }
       ]
     }
   },
@@ -181,7 +231,12 @@
       "name": "로켓 발사",
       "damage": 980,
       "effects": [
-        { "type": "rocketBurn", "range": 520, "fireDurationMs": 3000, "burnDurationMs": 4000 }
+        {
+          "type": "rocketBurn",
+          "range": 520,
+          "fireDurationMs": 3000,
+          "burnDurationMs": 4000
+        }
       ]
     },
     "ultimate": {
@@ -189,7 +244,11 @@
       "description": "전방으로 날아가 경로를 폭격하고 불태웁니다.",
       "damage": 1850,
       "effects": [
-        { "type": "flightBombardment", "range": 420, "radius": 58 }
+        {
+          "type": "flightBombardment",
+          "range": 420,
+          "radius": 58
+        }
       ]
     }
   },
@@ -203,7 +262,12 @@
       "name": "술병 투척",
       "damage": 0,
       "effects": [
-        { "type": "alcoholZone", "range": 360, "radius": 96, "durationMs": 4200 }
+        {
+          "type": "alcoholZone",
+          "range": 360,
+          "radius": 96,
+          "durationMs": 4200
+        }
       ]
     },
     "ultimate": {
@@ -211,7 +275,11 @@
       "description": "술을 던져 적을 취하게 만들고 자신에게 다가오게 합니다.",
       "damage": 1650,
       "effects": [
-        { "type": "charm", "durationMs": 3000, "range": 560 }
+        {
+          "type": "charm",
+          "durationMs": 3000,
+          "range": 560
+        }
       ]
     }
   },
@@ -225,7 +293,12 @@
       "name": "붓 휘두르기",
       "damage": 880,
       "effects": [
-        { "type": "paintCone", "range": 150, "slowPerHit": 0.05, "resetMs": 2000 }
+        {
+          "type": "paintCone",
+          "range": 150,
+          "slowPerHit": 0.05,
+          "resetMs": 2000
+        }
       ]
     },
     "ultimate": {
@@ -233,7 +306,10 @@
       "description": "두 번 이상 맞힌 적의 분신을 소환합니다.",
       "damage": 0,
       "effects": [
-        { "type": "summonClone", "cloneHp": 2000 }
+        {
+          "type": "summonClone",
+          "cloneHp": 2000
+        }
       ]
     }
   },
@@ -247,7 +323,10 @@
       "name": "장난감 찌르기",
       "damage": 920,
       "effects": [
-        { "type": "shortThrust", "range": 112 }
+        {
+          "type": "shortThrust",
+          "range": 112
+        }
       ]
     },
     "ultimate": {
@@ -255,7 +334,12 @@
       "description": "원하는 위치에 공을 던져 0.7초 뒤 고양이가 튀어나와 원 안의 적에게 피해를 줍니다.",
       "damage": 2200,
       "effects": [
-        { "type": "delayedCatPounce", "range": 410, "radius": 96, "delayMs": 700 }
+        {
+          "type": "delayedCatPounce",
+          "range": 410,
+          "radius": 96,
+          "delayMs": 700
+        }
       ]
     }
   },
@@ -269,7 +353,11 @@
       "name": "비커 투척",
       "damage": 360,
       "effects": [
-        { "type": "rotatingChemicalZone", "range": 360, "radius": 92 }
+        {
+          "type": "rotatingChemicalZone",
+          "range": 360,
+          "radius": 92
+        }
       ]
     },
     "ultimate": {
@@ -277,7 +365,11 @@
       "description": "HP를 5000 회복하고 일정 시간 공격력이 10% 증가합니다.",
       "damage": 0,
       "effects": [
-        { "type": "healAndDamageBoost", "heal": 5000, "damageMultiplier": 1.1 }
+        {
+          "type": "healAndDamageBoost",
+          "heal": 5000,
+          "damageMultiplier": 1.1
+        }
       ]
     }
   },
@@ -291,7 +383,11 @@
       "name": "키캡 연사",
       "damage": 260,
       "effects": [
-        { "type": "keycapBurst", "shots": 12, "range": 390 }
+        {
+          "type": "keycapBurst",
+          "shots": 12,
+          "range": 390
+        }
       ]
     },
     "ultimate": {
@@ -299,7 +395,14 @@
       "description": "조준한 위치에 회사를 세워 초록 장판을 만듭니다. 자신은 회복하고 적은 지속 피해를 받습니다.",
       "damage": 0,
       "effects": [
-        { "type": "officeZone", "range": 420, "radius": 122, "durationMs": 8000, "healPerSecond": 180, "damagePerSecond": 230 }
+        {
+          "type": "officeZone",
+          "range": 420,
+          "radius": 122,
+          "durationMs": 8000,
+          "healPerSecond": 180,
+          "damagePerSecond": 230
+        }
       ]
     }
   },
@@ -313,7 +416,11 @@
       "name": "바람 화살",
       "damage": 980,
       "effects": [
-        { "type": "chargedArrow", "minRange": 92, "maxRange": 520 }
+        {
+          "type": "chargedArrow",
+          "minRange": 92,
+          "maxRange": 520
+        }
       ]
     },
     "ultimate": {
@@ -321,8 +428,51 @@
       "description": "전방으로 토네이도를 날려 적을 1초 동안 띄우고, 적중 시 4개로 갈라집니다.",
       "damage": 0,
       "effects": [
-        { "type": "splitTornado", "range": 440, "splitCount": 4, "airborneMs": 1000 }
+        {
+          "type": "splitTornado",
+          "range": 440,
+          "splitCount": 4,
+          "airborneMs": 1000
+        }
       ]
-    }
+    },
+    "image": "/assets/characters/seojun-wind-spirit-front.png",
+    "portrait": "/assets/characters/seojun-wind-spirit-front.png"
+  },
+  {
+    "id": "seojun_chuunibyou",
+    "name": "서준-중2병",
+    "rarity": "Hero",
+    "hp": 4300,
+    "maxLevel": 10,
+    "basicAttack": {
+      "name": "어둠의 손 / 흑염 베기",
+      "damage": 760,
+      "effects": [
+        {
+          "type": "pullHand",
+          "range": 210
+        },
+        {
+          "type": "darkConeSlash",
+          "range": 145,
+          "damageMultiplier": 1.45
+        }
+      ]
+    },
+    "ultimate": {
+      "name": "흑염룡",
+      "description": "전방으로 매우 긴 사거리의 흑염룡을 날려 적중한 적에게 10000 피해를 줍니다.",
+      "damage": 10000,
+      "effects": [
+        {
+          "type": "blackDragon",
+          "range": 1800,
+          "warningLine": true
+        }
+      ]
+    },
+    "image": "/assets/characters/seojun-chuunibyou-front.png",
+    "portrait": "/assets/characters/seojun-chuunibyou-front.png"
   }
 ]

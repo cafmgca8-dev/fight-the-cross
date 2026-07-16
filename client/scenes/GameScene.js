@@ -33,6 +33,9 @@ export class GameScene {
     this.catPounceImage = null;
     this.businessCompanyImage = null;
     this.windTornadoImage = null;
+    this.chuunibyouHandImage = null;
+    this.chuunibyouSlashImage = null;
+    this.chuunibyouDragonImage = null;
     this.fireCrackleTimer = 0;
     this.storm = null;
   }
@@ -107,16 +110,26 @@ export class GameScene {
       this.loadImage('/assets/characters/seojun-wind-spirit-left.png').catch(() => null),
       this.loadImage('/assets/characters/seojun-wind-spirit-right.png').catch(() => null),
       this.loadImage('/assets/characters/seojun-wind-spirit-back.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-front.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-left.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-right.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-back.png').catch(() => null),
       this.loadImage('/assets/effects/haru-cat-pounce.png').catch(() => null),
       this.loadImage('/assets/effects/fire-particle.png').catch(() => null),
       this.loadImage('/assets/effects/business-company-front.png').catch(() => null),
-      this.loadImage('/assets/effects/wind-tornado.png').catch(() => null)
-    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, jaejunChemistFront, jaejunChemistLeft, jaejunChemistRight, jaejunChemistBack, kiseongBusinessmanSprite, seojunWindSpiritFront, seojunWindSpiritLeft, seojunWindSpiritRight, seojunWindSpiritBack, catPounceImage, fireImage, businessCompanyImage, windTornadoImage]) => {
+      this.loadImage('/assets/effects/wind-tornado.png').catch(() => null),
+      this.loadImage('/assets/effects/seojun-chuunibyou-hand.png').catch(() => null),
+      this.loadImage('/assets/effects/seojun-chuunibyou-slash.png').catch(() => null),
+      this.loadImage('/assets/effects/seojun-chuunibyou-dragon.png').catch(() => null)
+    ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, jaejunChemistFront, jaejunChemistLeft, jaejunChemistRight, jaejunChemistBack, kiseongBusinessmanSprite, seojunWindSpiritFront, seojunWindSpiritLeft, seojunWindSpiritRight, seojunWindSpiritBack, seojunChuunibyouFront, seojunChuunibyouLeft, seojunChuunibyouRight, seojunChuunibyouBack, catPounceImage, fireImage, businessCompanyImage, windTornadoImage, chuunibyouHandImage, chuunibyouSlashImage, chuunibyouDragonImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
       this.catPounceImage = catPounceImage;
       this.businessCompanyImage = businessCompanyImage;
       this.windTornadoImage = windTornadoImage;
+      this.chuunibyouHandImage = chuunibyouHandImage;
+      this.chuunibyouSlashImage = chuunibyouSlashImage;
+      this.chuunibyouDragonImage = chuunibyouDragonImage;
       if (jaejunSprite) this.setupCharacterSprite('jaejun', jaejunSprite);
       if (ainSprite) this.setupCharacterSprite('ain', ainSprite);
       if (seojunSprite) this.setupCharacterSprite('seojun', seojunSprite);
@@ -172,6 +185,14 @@ export class GameScene {
           left: seojunWindSpiritLeft,
           right: seojunWindSpiritRight,
           back: seojunWindSpiritBack
+        };
+      }
+      if (seojunChuunibyouFront || seojunChuunibyouLeft || seojunChuunibyouRight || seojunChuunibyouBack) {
+        this.processedCharacterSprites.seojun_chuunibyou = {
+          front: seojunChuunibyouFront,
+          left: seojunChuunibyouLeft,
+          right: seojunChuunibyouRight,
+          back: seojunChuunibyouBack
         };
       }
       this.setMaskImage(maskImage);
@@ -786,6 +807,7 @@ export class GameScene {
     const id = entity.character.id;
     const name = entity.character.basicAttack.name;
     if (id === 'seojun_wind_spirit') return { type: 'windArrow', cooldown: 0.18, reloadTime: 1.5, minRange: 92, range: 520, speed: 980, width: 5, hitRadius: 15, color: '#9dffd4', damageScale: 1.0 };
+    if (id === 'seojun_chuunibyou') return { type: 'chuunibyouCombo', cooldown: 0.18, reloadTime: 1.45, range: 210, speed: 610, width: 28, hitRadius: 26, color: '#3b102f', damageScale: 1.0, slashRange: 145, slashArcAngle: Math.PI * 0.58, slashDamageScale: 1.45 };
     if (id === 'kiseong_businessman') return { type: 'keycapBurst', cooldown: 0.18, reloadTime: 1.48, range: 390, speed: 780, width: 7, hitRadius: 14, spread: 0.42, color: '#1d1f24', damageScale: 1.0 };
     if (id === 'jaejun_chemist') return { type: 'chemicalBeaker', cooldown: 0.18, reloadTime: 1.42, range: 360, speed: 610, width: 9, hitRadius: 18, color: '#bb78ff', damageScale: 1.0, zoneRadius: 92, zoneDuration: 4.0 };
     if (id === 'ain_haru_butler') return { type: 'shortThrust', cooldown: 0.18, reloadTime: 1.28, range: 112, width: 26, color: '#ffd6e8', damageScale: 1.0 };
@@ -863,6 +885,18 @@ export class GameScene {
       this.playAttackProximitySound(owner, ['seojun_wind_spirit'], '/assets/audio/seojun-wind-arrow-fly.mp3', { selfVolume: 0.76, maxVolume: 0.66, minVolume: 0.17, range: 760, playbackRate: 1.08 });
       this.fireProjectile(owner, nx, ny, { ...profile, range, charge: rawPower }, 0, 0);
       this.effects.push({ type: 'line', x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.14, maxLife: 0.14, range });
+      return;
+    }
+
+    if (profile.type === 'chuunibyouCombo') {
+      const comboStep = owner.chuunibyouComboStep || 0;
+      owner.chuunibyouComboStep = (comboStep + 1) % 2;
+      if (comboStep === 0) {
+        this.fireProjectile(owner, nx, ny, { ...profile, type: 'shadowHand', range: profile.range, damageScale: 1.0 }, 0, 0);
+        this.effects.push({ type: 'shadowHand', x: owner.x, y: owner.y, dx: nx, dy: ny, color: '#1b0717', life: 0.18, maxLife: 0.18, range: profile.range, width: profile.width });
+      } else {
+        this.meleeAttack(owner, nx, ny, { ...profile, type: 'chuunibyouSlash', range: profile.slashRange, arcAngle: profile.slashArcAngle, damageScale: profile.slashDamageScale, color: '#5a163f' });
+      }
       return;
     }
 
@@ -997,7 +1031,7 @@ export class GameScene {
 
   meleeAttack(owner, nx, ny, profile) {
     this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.18, maxLife: 0.18, range: profile.range, width: profile.width, arcAngle: profile.arcAngle });
-    if (profile.type === 'clap' || profile.type === 'paintCone') {
+    if (profile.type === 'clap' || profile.type === 'paintCone' || profile.type === 'chuunibyouSlash') {
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
         if (this.hasWallBetween(owner.x, owner.y, entity.x, entity.y, 4)) continue;
@@ -1097,6 +1131,34 @@ export class GameScene {
   knockEntityBack(entity, nx, ny, distance) {
     const steps = Math.max(1, Math.ceil(distance / 8));
     const stepDistance = distance / steps;
+    const collisionRadius = Math.max(8, (entity.radius || 18) * 0.62);
+    for (let i = 0; i < steps; i += 1) {
+      const oldX = entity.x;
+      const oldY = entity.y;
+      entity.x += nx * stepDistance;
+      entity.y += ny * stepDistance;
+      this.game.mapManager.clampToArena(this.map, entity);
+      const outsideArena = !this.game.mapManager.isInsideArena(this.map, entity.x, entity.y, collisionRadius);
+      const blockedByWall = this.isWallAt(entity.x, entity.y, collisionRadius);
+      if (outsideArena || blockedByWall) {
+        entity.x = oldX;
+        entity.y = oldY;
+        break;
+      }
+    }
+  }
+
+  pullEntityToward(entity, targetX, targetY, stopDistance = 46) {
+    if (!entity.alive) return;
+    const dx = targetX - entity.x;
+    const dy = targetY - entity.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance <= stopDistance) return;
+    const nx = dx / distance;
+    const ny = dy / distance;
+    const travel = Math.max(0, distance - stopDistance);
+    const steps = Math.max(1, Math.ceil(travel / 10));
+    const stepDistance = travel / steps;
     const collisionRadius = Math.max(8, (entity.radius || 18) * 0.62);
     for (let i = 0; i < steps; i += 1) {
       const oldX = entity.x;
@@ -1615,6 +1677,7 @@ export class GameScene {
     else if (id === 'jaejun_chemist') this.castJaejunChemistUltimate(owner);
     else if (id === 'kiseong_businessman') this.castKiseongBusinessmanUltimate(owner, nx, ny, power);
     else if (id === 'seojun_wind_spirit') this.castSeojunWindSpiritUltimate(owner, nx, ny);
+    else if (id === 'seojun_chuunibyou') this.castSeojunChuunibyouUltimate(owner, nx, ny);
   }
 
   castAinUltimate(owner) {
@@ -1825,6 +1888,31 @@ export class GameScene {
     this.effects.push({ type: 'muzzle', x: owner.x + nx * 34, y: owner.y + ny * 34, color: profile.color, life: 0.22, maxLife: 0.22, radius: 32 });
   }
 
+  castSeojunChuunibyouUltimate(owner, nx, ny) {
+    const range = Math.max(this.map?.width || 1600, this.map?.height || 1200) * 1.35;
+    this.projectiles.push({
+      ownerId: owner.id,
+      x: owner.x + nx * 42,
+      y: owner.y + ny * 42,
+      dirX: nx,
+      dirY: ny,
+      vx: nx * 420,
+      vy: ny * 420,
+      speed: 420,
+      radius: 24,
+      hitRadius: 46,
+      travelLeft: range,
+      damage: owner.character?.ultimate?.damage || 10000,
+      life: Math.max(0.5, range / 420),
+      color: '#5b0dff',
+      type: 'blackDragon',
+      passThroughWalls: false,
+      chargeUltimate: false
+    });
+    this.effects.push({ type: 'dragonWarning', x: owner.x, y: owner.y, dx: nx, dy: ny, color: '#ff2b2b', life: 0.42, maxLife: 0.42, range, width: 78 });
+    this.effects.push({ type: 'muzzle', x: owner.x + nx * 42, y: owner.y + ny * 42, color: '#5b0dff', life: 0.28, maxLife: 0.28, radius: 38 });
+  }
+
   findTargetInDirection(owner, nx, ny, range, maxAngle) {
     let best = null;
     let bestScore = Infinity;
@@ -1979,6 +2067,12 @@ export class GameScene {
               this.spillChemicalBeaker(projectile);
             } else if (projectile.type === 'tornado') {
               this.applyTornadoHit(projectile, entity, owner);
+            } else if (projectile.type === 'shadowHand') {
+              this.damageEntity(entity, projectile.damage, owner);
+              if (owner?.alive) {
+                this.pullEntityToward(entity, owner.x, owner.y, 52);
+                this.effects.push({ type: 'line', x: owner.x, y: owner.y, dx: (entity.x - owner.x) / (Math.hypot(entity.x - owner.x, entity.y - owner.y) || 1), dy: (entity.y - owner.y) / (Math.hypot(entity.x - owner.x, entity.y - owner.y) || 1), color: '#5a163f', life: 0.22, maxLife: 0.22, range: Math.hypot(entity.x - owner.x, entity.y - owner.y) });
+              }
             } else {
               this.damageEntity(entity, projectile.damage, projectile.chargeUltimate === false ? null : owner);
             }
@@ -2633,6 +2727,24 @@ export class GameScene {
       ctx.beginPath();
       ctx.arc(player.x + vx * range, player.y + vy * range, 38, 0, Math.PI * 2);
       ctx.fill();
+    } else if (id === 'seojun_chuunibyou') {
+      const range = Math.max(this.map?.width || 1600, this.map?.height || 1200) * 1.35;
+      ctx.strokeStyle = '#ff2b2b';
+      ctx.fillStyle = '#ff2b2b';
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 78;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x + vx * range, player.y + vy * range);
+      ctx.stroke();
+      ctx.globalAlpha = 0.72;
+      ctx.lineWidth = 5;
+      ctx.setLineDash([18, 12]);
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(player.x + vx * range, player.y + vy * range);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -2662,6 +2774,32 @@ export class GameScene {
       ctx.beginPath();
       ctx.arc(player.x + this.attackVector.x * aimRange, player.y + this.attackVector.y * aimRange, 16, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+      return;
+    }
+    if (profile.type === 'chuunibyouCombo') {
+      const isSlash = (player.chuunibyouComboStep || 0) === 1;
+      if (isSlash) {
+        const angle = Math.atan2(this.attackVector.y, this.attackVector.x);
+        const half = (profile.slashArcAngle || Math.PI * 0.58) / 2;
+        ctx.globalAlpha = 0.24;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.arc(player.x, player.y, profile.slashRange || 145, angle - half, angle + half);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.globalAlpha = 0.34;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = profile.width || 28;
+        ctx.lineCap = 'round';
+        ctx.setLineDash([18, 12]);
+        ctx.beginPath();
+        ctx.moveTo(player.x + this.attackVector.x * 18, player.y + this.attackVector.y * 18);
+        ctx.lineTo(player.x + this.attackVector.x * profile.range, player.y + this.attackVector.y * profile.range);
+        ctx.stroke();
+      }
       ctx.restore();
       return;
     }
@@ -3138,7 +3276,23 @@ export class GameScene {
           ctx.stroke();
         }
       }
-    } else if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'catBall' || projectile.type === 'chemicalBeaker' || projectile.type === 'keycapBurst' || projectile.type === 'windArrow') {
+    } else if (projectile.type === 'blackDragon') {
+      ctx.translate(projectile.x, projectile.y);
+      ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
+      if (this.chuunibyouDragonImage) {
+        ctx.globalAlpha = 0.92;
+        ctx.scale(-1, 1);
+        ctx.drawImage(this.chuunibyouDragonImage, -110, -30, 220, 60);
+      } else {
+        ctx.fillStyle = '#130018';
+        ctx.strokeStyle = '#8f3dff';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 86, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else if (projectile.type === 'missile' || projectile.type === 'rocket' || projectile.type === 'alcoholBottle' || projectile.type === 'charmBottle' || projectile.type === 'catBall' || projectile.type === 'chemicalBeaker' || projectile.type === 'keycapBurst' || projectile.type === 'windArrow' || projectile.type === 'shadowHand') {
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX));
       ctx.beginPath();
@@ -3180,6 +3334,17 @@ export class GameScene {
         ctx.lineTo(8, 6);
         ctx.closePath();
         ctx.fill();
+      } else if (projectile.type === 'shadowHand') {
+        if (this.chuunibyouHandImage) {
+          ctx.globalAlpha = 0.9;
+          ctx.rotate(Math.PI / 2);
+          ctx.drawImage(this.chuunibyouHandImage, -20, -36, 40, 72);
+        } else {
+          ctx.fillStyle = '#090009';
+          ctx.beginPath();
+          ctx.arc(0, 0, 18, 0, Math.PI * 2);
+          ctx.fill();
+        }
       } else {
         ctx.moveTo(projectile.type === 'rocket' ? 20 : 16, 0);
         ctx.lineTo(-12, -8);
@@ -3208,8 +3373,8 @@ export class GameScene {
     ctx.globalAlpha = t;
     ctx.strokeStyle = effect.color;
     ctx.fillStyle = effect.color;
-    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'paintCone' || effect.type === 'thrust' || effect.type === 'shortThrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch') {
-      if (effect.type === 'clap' || effect.type === 'paintCone') {
+    if (effect.type === 'punch' || effect.type === 'bat' || effect.type === 'clap' || effect.type === 'paintCone' || effect.type === 'chuunibyouSlash' || effect.type === 'shadowHand' || effect.type === 'thrust' || effect.type === 'shortThrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch') {
+      if (effect.type === 'clap' || effect.type === 'paintCone' || effect.type === 'chuunibyouSlash') {
         const angle = Math.atan2(effect.dy, effect.dx);
         const half = (effect.arcAngle || Math.PI * 0.58) / 2;
         ctx.globalAlpha = t * 0.36;
@@ -3223,6 +3388,12 @@ export class GameScene {
         ctx.beginPath();
         ctx.arc(effect.x, effect.y, effect.range, angle - half, angle + half);
         ctx.stroke();
+        if (effect.type === 'chuunibyouSlash' && this.chuunibyouSlashImage) {
+          ctx.globalAlpha = t * 0.82;
+          ctx.translate(effect.x + effect.dx * effect.range * 0.56, effect.y + effect.dy * effect.range * 0.56);
+          ctx.rotate(angle);
+          ctx.drawImage(this.chuunibyouSlashImage, -82, -52, 164, 104);
+        }
       } else {
         ctx.lineWidth = effect.type === 'thrust' || effect.type === 'shortThrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch' ? (effect.width || 28) : (effect.type === 'bat' ? 22 : 16);
         ctx.lineCap = 'round';
@@ -3281,6 +3452,23 @@ export class GameScene {
       ctx.font = '900 18px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('★', effect.x, effect.y - 28 - (1 - t) * 16);
+    } else if (effect.type === 'dragonWarning') {
+      ctx.globalAlpha = t * 0.32;
+      ctx.strokeStyle = '#ff2b2b';
+      ctx.lineWidth = effect.width || 78;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(effect.x, effect.y);
+      ctx.lineTo(effect.x + effect.dx * effect.range, effect.y + effect.dy * effect.range);
+      ctx.stroke();
+      ctx.globalAlpha = t * 0.75;
+      ctx.lineWidth = 5;
+      ctx.setLineDash([18, 12]);
+      ctx.beginPath();
+      ctx.moveTo(effect.x, effect.y);
+      ctx.lineTo(effect.x + effect.dx * effect.range, effect.y + effect.dy * effect.range);
+      ctx.stroke();
+      ctx.setLineDash([]);
     } else if (effect.type === 'line') {
       ctx.lineWidth = 5;
       ctx.beginPath();
