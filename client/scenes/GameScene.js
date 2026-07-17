@@ -1,3 +1,6 @@
+const WIND_ARROW_CHARGE_MS = 1750;
+const NEW_CHARACTER_ASSET_VERSION = '20260717c';
+
 export class GameScene {
   constructor(game) {
     this.game = game;
@@ -106,21 +109,21 @@ export class GameScene {
       this.loadImage('/assets/characters/jaejun-chemist-right.png').catch(() => null),
       this.loadImage('/assets/characters/jaejun-chemist-back.png').catch(() => null),
       this.loadImage('/assets/characters/kiseong-businessman-reference.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-wind-spirit-front.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-wind-spirit-left.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-wind-spirit-right.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-wind-spirit-back.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-chuunibyou-front.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-chuunibyou-left.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-chuunibyou-right.png').catch(() => null),
-      this.loadImage('/assets/characters/seojun-chuunibyou-back.png').catch(() => null),
+      this.loadImage('/assets/characters/seojun-wind-spirit-front.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/characters/seojun-wind-spirit-left.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/characters/seojun-wind-spirit-right.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/characters/seojun-wind-spirit-back.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-front.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-left.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-right.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/characters/seojun-chuunibyou-back.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
       this.loadImage('/assets/effects/haru-cat-pounce.png').catch(() => null),
       this.loadImage('/assets/effects/fire-particle.png').catch(() => null),
       this.loadImage('/assets/effects/business-company-front.png').catch(() => null),
-      this.loadImage('/assets/effects/wind-tornado.png').catch(() => null),
-      this.loadImage('/assets/effects/seojun-chuunibyou-hand.png').catch(() => null),
-      this.loadImage('/assets/effects/seojun-chuunibyou-slash.png').catch(() => null),
-      this.loadImage('/assets/effects/seojun-chuunibyou-dragon.png').catch(() => null)
+      this.loadImage('/assets/effects/wind-tornado.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/effects/seojun-chuunibyou-hand.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/effects/seojun-chuunibyou-slash.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null),
+      this.loadImage('/assets/effects/seojun-chuunibyou-dragon.png?v=' + NEW_CHARACTER_ASSET_VERSION).catch(() => null)
     ]).then(([image, maskImage, jaejunSprite, ainSprite, seojunSprite, kiseongSprite, hyoseongSprite, jaejunCowboySprite, ainHwangGeneralFront, ainHwangGeneralLeft, ainHwangGeneralRight, ainHwangGeneralBack, seojunBoxerFront, seojunBoxerLeft, seojunBoxerRight, seojunBoxerBack, hyoseongGundamFront, hyoseongGundamLeft, hyoseongGundamRight, hyoseongGundamBack, jaejunBartenderFront, jaejunBartenderLeft, jaejunBartenderRight, jaejunBartenderBack, ainArtcatSprite, ainHaruButlerSprite, jaejunChemistSprite, jaejunChemistFront, jaejunChemistLeft, jaejunChemistRight, jaejunChemistBack, kiseongBusinessmanSprite, seojunWindSpiritFront, seojunWindSpiritLeft, seojunWindSpiritRight, seojunWindSpiritBack, seojunChuunibyouFront, seojunChuunibyouLeft, seojunChuunibyouRight, seojunChuunibyouBack, catPounceImage, fireImage, businessCompanyImage, windTornadoImage, chuunibyouHandImage, chuunibyouSlashImage, chuunibyouDragonImage]) => {
       this.mapImage = image;
       this.fireImage = fireImage;
@@ -365,7 +368,7 @@ export class GameScene {
       const moved = start ? Math.hypot(event.clientX - start.x, event.clientY - start.y) : 0;
       const player = this.getControlledEntity();
       const isWindSpirit = player?.character?.id === 'seojun_wind_spirit';
-      const windCharge = start ? Math.max(0, Math.min(1, (performance.now() - (start.startedAt || performance.now())) / 1150)) : 0;
+      const windCharge = start ? Math.max(0, Math.min(1, (performance.now() - (start.startedAt || performance.now())) / WIND_ARROW_CHARGE_MS)) : 0;
       reset();
       if (vector.power > 0.18 && moved > 10) {
         this.performAttack(player, vector.x, vector.y, false, false, isWindSpirit ? windCharge : vector.power);
@@ -893,9 +896,9 @@ export class GameScene {
       owner.chuunibyouComboStep = (comboStep + 1) % 2;
       if (comboStep === 0) {
         this.fireProjectile(owner, nx, ny, { ...profile, type: 'shadowHand', range: profile.range, damageScale: 1.0 }, 0, 0);
-        this.effects.push({ type: 'shadowHand', x: owner.x, y: owner.y, dx: nx, dy: ny, color: '#1b0717', life: 0.18, maxLife: 0.18, range: profile.range, width: profile.width });
+        this.effects.push({ type: 'shadowHand', x: owner.x, y: owner.y, dx: nx, dy: ny, color: '#1b0717', life: 0.28, maxLife: 0.28, range: profile.range, width: profile.width });
       } else {
-        this.meleeAttack(owner, nx, ny, { ...profile, type: 'chuunibyouSlash', range: profile.slashRange, arcAngle: profile.slashArcAngle, damageScale: profile.slashDamageScale, color: '#5a163f' });
+        this.meleeAttack(owner, nx, ny, { ...profile, type: 'chuunibyouSlash', range: profile.slashRange, arcAngle: profile.slashArcAngle, damageScale: profile.slashDamageScale, color: '#5a163f', effectLife: 0.32 });
       }
       return;
     }
@@ -1030,7 +1033,8 @@ export class GameScene {
   }
 
   meleeAttack(owner, nx, ny, profile) {
-    this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: 0.18, maxLife: 0.18, range: profile.range, width: profile.width, arcAngle: profile.arcAngle });
+    const effectLife = profile.effectLife || 0.18;
+    this.effects.push({ type: profile.type, x: owner.x, y: owner.y, dx: nx, dy: ny, color: profile.color, life: effectLife, maxLife: effectLife, range: profile.range, width: profile.width, arcAngle: profile.arcAngle });
     if (profile.type === 'clap' || profile.type === 'paintCone' || profile.type === 'chuunibyouSlash') {
       for (const entity of this.entities) {
         if (!entity.alive || entity.id === owner.id) continue;
@@ -1214,6 +1218,7 @@ export class GameScene {
       life: Math.max(0.05, (profile.range - 28) / profile.speed),
       color: profile.color,
       type: profile.type,
+      sprite: profile.sprite || null,
       passThroughWalls: profile.type === 'alcoholBottle',
       zoneRadius: profile.zoneRadius || 0,
       zoneDuration: profile.zoneDuration || 0,
@@ -1880,6 +1885,7 @@ export class GameScene {
       hitRadius: 38,
       color: '#74ff9b',
       damageScale: 0,
+      sprite: 'windTornado',
       splitDepth: 0,
       tornadoLiftMs: 1000,
       tornadoPush: 54
@@ -2123,6 +2129,7 @@ export class GameScene {
         hitRadius: projectile.hitRadius || 38,
         color: projectile.color || '#74ff9b',
         damageScale: 0,
+        sprite: 'windTornado',
         splitDepth: (projectile.splitDepth || 0) + 1,
         tornadoLiftMs: projectile.tornadoLiftMs || 1000,
         tornadoPush: Math.max(36, (projectile.tornadoPush || 54) - 8)
@@ -2145,6 +2152,7 @@ export class GameScene {
         life: Math.max(0.05, (profile.range - 18) / profile.speed),
         color: profile.color,
         type: profile.type,
+        sprite: profile.sprite,
         passThroughWalls: false,
         splitDepth: profile.splitDepth,
         baseRange: profile.baseRange,
@@ -2757,7 +2765,7 @@ export class GameScene {
     ctx.save();
     if (profile.type === 'windArrow') {
       const startedAt = this.attackStart?.startedAt || performance.now();
-      const charge = Math.max(0, Math.min(1, (performance.now() - startedAt) / 1150));
+      const charge = Math.max(0, Math.min(1, (performance.now() - startedAt) / WIND_ARROW_CHARGE_MS));
       const aimRange = (profile.minRange || 92) + ((profile.range || 520) - (profile.minRange || 92)) * charge;
       ctx.globalAlpha = 0.42;
       ctx.strokeStyle = '#ffffff';
@@ -3260,7 +3268,7 @@ export class GameScene {
     ctx.shadowColor = projectile.color;
     ctx.shadowBlur = projectile.type === 'sniper' ? 18 : 10;
     ctx.beginPath();
-    if (projectile.type === 'tornado') {
+    if (projectile.type === 'tornado' || projectile.sprite === 'windTornado') {
       ctx.translate(projectile.x, projectile.y);
       const pulse = 1 + Math.sin(performance.now() / 90) * 0.05;
       if (this.windTornadoImage) {
@@ -3282,7 +3290,7 @@ export class GameScene {
       if (this.chuunibyouDragonImage) {
         ctx.globalAlpha = 0.92;
         ctx.scale(-1, 1);
-        ctx.drawImage(this.chuunibyouDragonImage, -110, -30, 220, 60);
+        ctx.drawImage(this.chuunibyouDragonImage, -175, -38, 350, 76);
       } else {
         ctx.fillStyle = '#130018';
         ctx.strokeStyle = '#8f3dff';
@@ -3336,9 +3344,9 @@ export class GameScene {
         ctx.fill();
       } else if (projectile.type === 'shadowHand') {
         if (this.chuunibyouHandImage) {
-          ctx.globalAlpha = 0.9;
-          ctx.rotate(Math.PI / 2);
-          ctx.drawImage(this.chuunibyouHandImage, -20, -36, 40, 72);
+          ctx.globalAlpha = 0.94;
+          ctx.rotate(-Math.PI / 2);
+          ctx.drawImage(this.chuunibyouHandImage, -29, -54, 58, 108);
         } else {
           ctx.fillStyle = '#090009';
           ctx.beginPath();
@@ -3389,10 +3397,10 @@ export class GameScene {
         ctx.arc(effect.x, effect.y, effect.range, angle - half, angle + half);
         ctx.stroke();
         if (effect.type === 'chuunibyouSlash' && this.chuunibyouSlashImage) {
-          ctx.globalAlpha = t * 0.82;
+          ctx.globalAlpha = Math.min(1, t + 0.2) * 0.92;
           ctx.translate(effect.x + effect.dx * effect.range * 0.56, effect.y + effect.dy * effect.range * 0.56);
           ctx.rotate(angle);
-          ctx.drawImage(this.chuunibyouSlashImage, -82, -52, 164, 104);
+          ctx.drawImage(this.chuunibyouSlashImage, -110, -70, 220, 140);
         }
       } else {
         ctx.lineWidth = effect.type === 'thrust' || effect.type === 'shortThrust' || effect.type === 'slashDash' || effect.type === 'boxerPunch' ? (effect.width || 28) : (effect.type === 'bat' ? 22 : 16);

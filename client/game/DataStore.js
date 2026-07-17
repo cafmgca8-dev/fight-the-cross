@@ -22,7 +22,7 @@ export class DataStore {
   }
 
   async fetchJson(path) {
-    const response = await fetch(this.basePath + path);
+    const response = await fetch(this.basePath + path, { cache: 'no-store' });
     if (!response.ok) throw new Error(path + ' 로드 실패');
     return response.json();
   }

@@ -436,8 +436,8 @@
         }
       ]
     },
-    "image": "/assets/characters/seojun-wind-spirit-front.png",
-    "portrait": "/assets/characters/seojun-wind-spirit-front.png"
+    "image": "/assets/characters/seojun-wind-spirit-front.png?v=20260717c",
+    "portrait": "/assets/characters/seojun-wind-spirit-front.png?v=20260717c"
   },
   {
     "id": "seojun_chuunibyou",
@@ -472,7 +472,7 @@
         }
       ]
     },
-    "image": "/assets/characters/seojun-chuunibyou-front.png",
-    "portrait": "/assets/characters/seojun-chuunibyou-front.png"
+    "image": "/assets/characters/seojun-chuunibyou-front.png?v=20260717c",
+    "portrait": "/assets/characters/seojun-chuunibyou-front.png?v=20260717c"
   }
 ]
