@@ -81,11 +81,27 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('gameStarted', { room, mode: result.mode, startedAt: Date.now() });
   }));
 
-  socket.on('playerState', (payload = {}) => handle(socket, () => {
+  socket.on('playerState', (payload = {}) => {
     const room = roomManager.get(payload.code);
-    if (!room) return;
-    socket.to(room.code).emit('playerState', { ...payload, playerId: socket.id });
-  }));
+    if (!room || !room.players.some((player) => player.id === socket.id)) return;
+    if (!Number.isFinite(payload.x) || !Number.isFinite(payload.y)) return;
+    const state = {
+      playerId: socket.id,
+      seq: Number.isFinite(payload.seq) ? payload.seq : 0,
+      x: payload.x,
+      y: payload.y,
+      hp: Number.isFinite(payload.hp) ? payload.hp : 0,
+      alive: Boolean(payload.alive),
+      dirX: Number.isFinite(payload.dirX) ? payload.dirX : 0,
+      dirY: Number.isFinite(payload.dirY) ? payload.dirY : -1,
+      ammo: Number.isFinite(payload.ammo) ? payload.ammo : 0,
+      ammoReloadTimer: Number.isFinite(payload.ammoReloadTimer) ? payload.ammoReloadTimer : 0,
+      ultimateHits: Number.isFinite(payload.ultimateHits) ? payload.ultimateHits : 0,
+      ultimateReady: Boolean(payload.ultimateReady)
+    };
+    const channel = payload.reliable ? socket.to(room.code) : socket.to(room.code).volatile;
+    channel.emit('playerState', state);
+  });
 
   socket.on('playerAttack', (payload = {}) => handle(socket, () => {
     const room = roomManager.get(payload.code);

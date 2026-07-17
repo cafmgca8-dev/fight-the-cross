@@ -53,7 +53,11 @@ export class NetworkManager {
   openBox(payload) { this.socket?.emit('openBox', payload); }
   levelUp(payload) { this.socket?.emit('levelUp', payload); }
   claimVictory(payload) { this.socket?.emit('claimVictory', payload); }
-  sendPlayerState(payload) { this.socket?.emit('playerState', payload); }
+  sendPlayerState(payload, reliable = false) {
+    if (!this.socket) return;
+    const channel = reliable ? this.socket : this.socket.volatile;
+    channel.emit('playerState', payload);
+  }
   sendPlayerAttack(payload) { this.socket?.emit('playerAttack', payload); }
   sendPlayerUltimate(payload) { this.socket?.emit('playerUltimate', payload); }
 

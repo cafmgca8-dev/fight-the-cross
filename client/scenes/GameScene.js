@@ -1,5 +1,17 @@
 const WIND_ARROW_CHARGE_MS = 1750;
 const NEW_CHARACTER_ASSET_VERSION = '20260717c';
+const NETWORK_STATE_INTERVAL = 1 / 15;
+const NETWORK_KEEPALIVE_INTERVAL = 0.35;
+const REMOTE_PLAYER_FOLLOW_SPEED = 16;
+const REMOTE_PLAYER_SNAP_DISTANCE = 260;
+const HUD_UPDATE_INTERVAL = 0.1;
+const MASK_WALL = 1;
+const MASK_BUSH = 2;
+const MASK_WATER = 4;
+const MASK_SAMPLE_OFFSETS = [
+  [0, 0], [1, 0], [-1, 0], [0, 1], [0, -1],
+  [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]
+];
 
 export class GameScene {
   constructor(game) {
@@ -21,6 +33,10 @@ export class GameScene {
     this.finished = false;
     this.frameId = null;
     this.stateSendTimer = 0;
+    this.stateSequence = 0;
+    this.networkKeepaliveTimer = 0;
+    this.lastSentState = null;
+    this.hudUpdateTimer = 0;
     this.environmentTimer = 0;
     this.networkUnsubs = [];
     this.isMultiplayer = false;
@@ -247,7 +263,12 @@ export class GameScene {
     this.finished = false;
     this.attackCooldown = 0;
     this.stateSendTimer = 0;
+    this.stateSequence = 0;
+    this.networkKeepaliveTimer = 0;
+    this.lastSentState = null;
+    this.hudUpdateTimer = 0;
     this.environmentTimer = 0;
+    this.wallZones = [...(this.map.walls || []), ...(this.map.cover || [])];
     this.snapCameraToPlayer();
   }
 
@@ -265,7 +286,8 @@ export class GameScene {
       ultimateHits: 0, ultimateReady: false, stunnedUntil: 0, speedBoostUntil: 0, damageBoostUntil: 0, damageBoostMultiplier: 1, damageReductionUntil: 0, damageTakenMultiplier: 1, waterSlowUntil: 0,
       artcatSlowStacks: 0, artcatSlowUntil: 0, artcatMarks: {},
       chemistAttackIndex: 0,
-      lastCombatAt: performance.now(), regenTickTimer: 0
+      lastCombatAt: performance.now(), regenTickTimer: 0,
+      networkTargetX: spawn.x, networkTargetY: spawn.y, networkSequence: -1
     };
   }
 
@@ -456,12 +478,22 @@ export class GameScene {
     this.networkUnsubs.push(this.game.network.on('playerState', (payload) => {
       const entity = this.entities.find((item) => item.id === payload.playerId);
       if (!entity || entity.controlled) return;
-      entity.x = payload.x;
-      entity.y = payload.y;
-      entity.hp = payload.hp;
-      entity.alive = payload.alive;
-      entity.dirX = payload.dirX;
-      entity.dirY = payload.dirY;
+      if (Number.isFinite(payload.seq) && payload.seq <= (entity.networkSequence ?? -1)) return;
+      if (Number.isFinite(payload.seq)) entity.networkSequence = payload.seq;
+
+      if (Number.isFinite(payload.x) && Number.isFinite(payload.y)) {
+        const targetDistance = Math.hypot(payload.x - entity.x, payload.y - entity.y);
+        entity.networkTargetX = payload.x;
+        entity.networkTargetY = payload.y;
+        if (targetDistance > REMOTE_PLAYER_SNAP_DISTANCE) {
+          entity.x = payload.x;
+          entity.y = payload.y;
+        }
+      }
+      if (Number.isFinite(payload.hp)) entity.hp = payload.hp;
+      if (typeof payload.alive === 'boolean') entity.alive = payload.alive;
+      if (Number.isFinite(payload.dirX)) entity.dirX = payload.dirX;
+      if (Number.isFinite(payload.dirY)) entity.dirY = payload.dirY;
       if (typeof payload.ammo === 'number') entity.ammo = payload.ammo;
       if (typeof payload.ammoReloadTimer === 'number') entity.ammoReloadTimer = payload.ammoReloadTimer;
       if (typeof payload.ultimateHits === 'number') entity.ultimateHits = payload.ultimateHits;
@@ -485,26 +517,40 @@ export class GameScene {
     }));
   }
 
-  broadcastState(delta) {
+  broadcastState(delta, force = delta >= 0.5) {
     if (!this.isMultiplayer || !this.game.room?.code) return;
     this.stateSendTimer -= delta;
-    if (this.stateSendTimer > 0) return;
-    this.stateSendTimer = 0.05;
+    this.networkKeepaliveTimer += delta;
+    if (!force && this.stateSendTimer > 0) return;
+    this.stateSendTimer = force
+      ? NETWORK_STATE_INTERVAL
+      : Math.max(0, this.stateSendTimer + NETWORK_STATE_INTERVAL);
     const player = this.getControlledEntity();
     if (!player) return;
-    this.game.network.sendPlayerState({
-      code: this.game.room.code,
+    const state = {
       x: Math.round(player.x),
       y: Math.round(player.y),
-      hp: player.hp,
+      hp: Math.round(player.hp),
       alive: player.alive,
-      dirX: player.dirX,
-      dirY: player.dirY,
+      dirX: Math.round((player.dirX || 0) * 1000) / 1000,
+      dirY: Math.round((player.dirY || 0) * 1000) / 1000,
       ammo: player.ammo,
-      ammoReloadTimer: player.ammoReloadTimer,
+      ammoReloadTimer: Math.round((player.ammoReloadTimer || 0) * 100) / 100,
       ultimateHits: player.ultimateHits,
       ultimateReady: player.ultimateReady
-    });
+    };
+    const changed = !this.lastSentState || Object.keys(state).some((key) => state[key] !== this.lastSentState[key]);
+    if (!force && !changed && this.networkKeepaliveTimer < NETWORK_KEEPALIVE_INTERVAL) return;
+
+    this.stateSequence += 1;
+    this.game.network.sendPlayerState({
+      code: this.game.room.code,
+      seq: this.stateSequence,
+      reliable: force,
+      ...state
+    }, force);
+    this.lastSentState = state;
+    this.networkKeepaliveTimer = 0;
   }
 
   getControlledEntity() {
@@ -524,7 +570,10 @@ export class GameScene {
   resize() {
     if (!this.canvas) return;
     const rect = this.canvas.getBoundingClientRect();
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const playerCount = this.game.room?.players?.length || 0;
+    const compactViewport = rect.width <= 1100 || window.innerWidth <= 1100;
+    const maxDpr = compactViewport ? (playerCount >= 2 ? 1.25 : 1.5) : 1.75;
+    const dpr = Math.max(1, Math.min(maxDpr, window.devicePixelRatio || 1));
     this.canvas.width = Math.max(320, Math.floor(rect.width * dpr));
     this.canvas.height = Math.max(180, Math.floor(rect.height * dpr));
     this.updateCameraSize();
@@ -575,13 +624,40 @@ export class GameScene {
     this.maskImage = maskImage;
     this.maskCanvas = null;
     this.maskCtx = null;
+    this.maskFlags = null;
+    this.maskWidth = 0;
+    this.maskHeight = 0;
     if (!maskImage) return;
     this.maskCanvas = document.createElement('canvas');
     this.maskCanvas.width = maskImage.naturalWidth || maskImage.width;
     this.maskCanvas.height = maskImage.naturalHeight || maskImage.height;
+    this.maskWidth = this.maskCanvas.width;
+    this.maskHeight = this.maskCanvas.height;
     this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true });
     this.maskCtx.drawImage(maskImage, 0, 0, this.maskCanvas.width, this.maskCanvas.height);
+    try {
+      const pixels = this.maskCtx.getImageData(0, 0, this.maskWidth, this.maskHeight).data;
+      this.maskFlags = new Uint8Array(this.maskWidth * this.maskHeight);
+      for (let index = 0, pixel = 0; index < this.maskFlags.length; index += 1, pixel += 4) {
+        const r = pixels[pixel];
+        const g = pixels[pixel + 1];
+        const b = pixels[pixel + 2];
+        let flags = 0;
+        if (r < 70 && g < 70 && b < 70) flags |= MASK_WALL;
+        if (g > 120 && g > r * 1.35 && g > b * 1.15) flags |= MASK_BUSH;
+        if (b > 130 && b > r * 1.35 && g > 80) flags |= MASK_WATER;
+        this.maskFlags[index] = flags;
+      }
+    } catch {
+      this.maskFlags = null;
+    }
     this.buildBushComponents();
+    if (this.maskFlags) {
+      this.maskCanvas.width = 1;
+      this.maskCanvas.height = 1;
+      this.maskCanvas = null;
+      this.maskCtx = null;
+    }
   }
 
   buildBushComponents() {
@@ -627,38 +703,40 @@ export class GameScene {
     }
   }
 
-  getMaskFlags(x, y) {
-    if (!this.maskCtx) return { wall: false, bush: false, water: false };
-    const px = Math.max(0, Math.min(this.maskCanvas.width - 1, Math.round((x / this.map.width) * this.maskCanvas.width)));
-    const py = Math.max(0, Math.min(this.maskCanvas.height - 1, Math.round((y / this.map.height) * this.maskCanvas.height)));
+  getMaskBits(x, y) {
+    if (!this.maskFlags && !this.maskCtx) return 0;
+    const width = this.maskWidth || this.maskCanvas.width;
+    const height = this.maskHeight || this.maskCanvas.height;
+    const px = Math.max(0, Math.min(width - 1, Math.round((x / this.map.width) * width)));
+    const py = Math.max(0, Math.min(height - 1, Math.round((y / this.map.height) * height)));
+    if (this.maskFlags) return this.maskFlags[py * width + px];
     const data = this.maskCtx.getImageData(px, py, 1, 1).data;
-    const r = data[0];
-    const g = data[1];
-    const b = data[2];
+    let flags = 0;
+    if (data[0] < 70 && data[1] < 70 && data[2] < 70) flags |= MASK_WALL;
+    if (data[1] > 120 && data[1] > data[0] * 1.35 && data[1] > data[2] * 1.15) flags |= MASK_BUSH;
+    if (data[2] > 130 && data[2] > data[0] * 1.35 && data[1] > 80) flags |= MASK_WATER;
+    return flags;
+  }
+
+  getMaskFlags(x, y) {
+    const flags = this.getMaskBits(x, y);
     return {
-      wall: r < 70 && g < 70 && b < 70,
-      bush: g > 120 && g > r * 1.35 && g > b * 1.15,
-      water: b > 130 && b > r * 1.35 && g > 80
+      wall: Boolean(flags & MASK_WALL),
+      bush: Boolean(flags & MASK_BUSH),
+      water: Boolean(flags & MASK_WATER)
     };
   }
 
-  getAreaMaskFlags(x, y, radius = 20) {
-    const samples = [
-      [x, y], [x + radius, y], [x - radius, y], [x, y + radius], [x, y - radius],
-      [x + radius * 0.7, y + radius * 0.7], [x - radius * 0.7, y + radius * 0.7],
-      [x + radius * 0.7, y - radius * 0.7], [x - radius * 0.7, y - radius * 0.7]
-    ];
-    return samples.reduce((flags, point) => {
-      const next = this.getMaskFlags(point[0], point[1]);
-      flags.wall = flags.wall || next.wall;
-      flags.bush = flags.bush || next.bush;
-      flags.water = flags.water || next.water;
-      return flags;
-    }, { wall: false, bush: false, water: false });
+  hasMaskFlagInArea(x, y, radius, flag) {
+    if (radius <= 0) return Boolean(this.getMaskBits(x, y) & flag);
+    for (const [offsetX, offsetY] of MASK_SAMPLE_OFFSETS) {
+      if (this.getMaskBits(x + radius * offsetX, y + radius * offsetY) & flag) return true;
+    }
+    return false;
   }
 
   isWallAt(x, y, radius = 20) {
-    return this.getAreaMaskFlags(x, y, radius).wall || this.isInRectZones([...(this.map.walls || []), ...(this.map.cover || [])], x, y, radius);
+    return this.hasMaskFlagInArea(x, y, radius, MASK_WALL) || this.isInRectZones(this.wallZones, x, y, radius);
   }
 
   hasWallBetween(ax, ay, bx, by, radius = 3) {
@@ -674,7 +752,7 @@ export class GameScene {
   }
 
   isWaterAt(x, y, radius = 20) {
-    return this.getAreaMaskFlags(x, y, radius).water || this.isInRectZones(this.map.waterZones, x, y, radius);
+    return this.hasMaskFlagInArea(x, y, radius, MASK_WATER) || this.isInRectZones(this.map.waterZones, x, y, radius);
   }
 
   isSnowAt(x, y, radius = 20) {
@@ -686,7 +764,7 @@ export class GameScene {
   }
 
   isBushAt(x, y, radius = 20) {
-    return this.getAreaMaskFlags(x, y, radius).bush || this.isInRectZones(this.map.foliage, x, y, radius);
+    return this.hasMaskFlagInArea(x, y, radius, MASK_BUSH) || this.isInRectZones(this.map.foliage, x, y, radius);
   }
 
   isInRectZones(zones = [], x, y, radius = 0) {
@@ -700,7 +778,7 @@ export class GameScene {
   }
 
   loop(now) {
-    const delta = Math.min(0.033, (now - this.lastTime) / 1000);
+    const delta = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
     this.update(delta);
     this.draw();
@@ -712,6 +790,7 @@ export class GameScene {
     this.updateCharmedEntities(delta);
     this.updateSummons(delta);
     this.updatePlayer(delta);
+    this.updateRemotePlayers(delta);
     this.updateSpecialZones(delta);
     this.updateStorm(delta);
     this.updateFireZones(delta);
@@ -726,7 +805,11 @@ export class GameScene {
     this.updateProjectiles(delta);
     this.updateEffects(delta);
     this.updateCamera(delta);
-    this.updateHud();
+    this.hudUpdateTimer -= delta;
+    if (this.hudUpdateTimer <= 0) {
+      this.hudUpdateTimer = HUD_UPDATE_INTERVAL;
+      this.updateHud();
+    }
     this.checkWinner();
   }
 
@@ -735,6 +818,27 @@ export class GameScene {
     if (!player || this.isControlBlocked(player)) return;
     const vector = this.getMoveVector();
     this.moveEntity(player, vector.x, vector.y, delta);
+  }
+
+  updateRemotePlayers(delta) {
+    if (!this.isMultiplayer) return;
+    const follow = 1 - Math.exp(-REMOTE_PLAYER_FOLLOW_SPEED * delta);
+    for (const entity of this.entities) {
+      if (entity.controlled || entity.isSummon || !Number.isFinite(entity.networkTargetX) || !Number.isFinite(entity.networkTargetY)) continue;
+      const dx = entity.networkTargetX - entity.x;
+      const dy = entity.networkTargetY - entity.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > REMOTE_PLAYER_SNAP_DISTANCE) {
+        entity.x = entity.networkTargetX;
+        entity.y = entity.networkTargetY;
+      } else if (distance < 0.1) {
+        entity.x = entity.networkTargetX;
+        entity.y = entity.networkTargetY;
+      } else {
+        entity.x += dx * follow;
+        entity.y += dy * follow;
+      }
+    }
   }
 
   getMoveVector() {
